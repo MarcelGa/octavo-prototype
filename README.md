@@ -62,6 +62,16 @@ It opens full screen with the Otto icon, like an app.
 
 GitHub Pages is free for public repositories; a private repository needs a paid plan (e.g. GitHub Pro). The published site is visible to anyone who has the link.
 
+## Releasing a new version
+
+GitHub Pages lets browsers reuse files for up to 10 minutes, so phones can keep showing an old copy. To make every device pick up a release, bump the version number in **three places** before you push:
+
+1. `version.json`: `{ "version": "4" }`
+2. `APP_VERSION` near the bottom of `app.js`
+3. Every `?v=` in `index.html`
+
+The app checks `version.json` when it opens or comes back to the foreground and reloads itself once if a newer version is out.
+
 ## Notes
 
 - Fonts (Fredoka, Nunito) load from Google Fonts. Without internet access the prototype falls back to the system font and still works.

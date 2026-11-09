@@ -836,3 +836,25 @@ document.addEventListener('keydown', (e) => {
 
 window.addEventListener('hashchange', route);
 route();
+
+// ---------------------------------------------------------------- updates
+
+// GitHub Pages lets browsers reuse files for up to 10 minutes, so a phone can keep
+// running an old copy after a release. Compare with version.json (fetched fresh)
+// and reload once when a newer release is out. Bump APP_VERSION with every release.
+const APP_VERSION = '3';
+function checkForUpdate() {
+  fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((v) => {
+      if (!v || v.version === APP_VERSION) return;
+      let tried = null;
+      try { tried = sessionStorage.getItem('octavo-reloaded-for'); } catch { /* ignore */ }
+      if (tried === v.version) return; // already reloaded once for this release
+      try { sessionStorage.setItem('octavo-reloaded-for', v.version); } catch { /* ignore */ }
+      location.reload();
+    })
+    .catch(() => { /* offline or file:// — keep running */ });
+}
+checkForUpdate();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });
