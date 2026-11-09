@@ -8,7 +8,7 @@
      #practice          "Today's mix" quick quiz
      #progress          the "nine brains" profile screen */
 
-const { courses, speak, tone, NOTE } = window.Octavo;
+const { courses, speak, tone, sfx, NOTE } = window.Octavo;
 
 // ---------------------------------------------------------------- subjects
 
@@ -101,6 +101,7 @@ const ICON = {
   play: 'M7 4l13 8-13 8z',
   replay: 'M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5',
   speaker: 'M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12',
+  mute: 'M4 9h4l5-4v14l-5-4H4zM17 9l5 6M22 9l-5 6',
   lock: 'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3',
   slides: 'M4 5h16v11H4zM9 20h6M12 16v4',
   music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 1 1 6 0M20 16a3 3 0 1 1-6 0a3 3 0 1 1 6 0',
@@ -116,15 +117,15 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 // ---------------------------------------------------------------- state
 
 const STORE_KEY = 'octavo-prototype-v2';
-const defaults = () => ({ ink: 340, streak: 12, lessons: 38, doneToday: false, completed: {}, lastCourse: 'nervous-system' });
+const defaults = () => ({ ink: 340, streak: 12, lessons: 38, doneToday: false, completed: {}, lastCourse: 'nervous-system', sound: true });
 
 function loadSaved() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
 }
 function save() {
   try {
-    const { ink, streak, lessons, doneToday, completed, lastCourse } = state;
-    localStorage.setItem(STORE_KEY, JSON.stringify({ ink, streak, lessons, doneToday, completed, lastCourse }));
+    const { ink, streak, lessons, doneToday, completed, lastCourse, sound } = state;
+    localStorage.setItem(STORE_KEY, JSON.stringify({ ink, streak, lessons, doneToday, completed, lastCourse, sound }));
   } catch { /* storage blocked: the demo still works, it just won't remember */ }
 }
 
@@ -144,14 +145,14 @@ function newRun(kind, lesson) {
   const run = {
     kind, lesson, phase: kind === 'lesson' ? 'slides' : 'quiz', slide: 0, dir: '',
     questions: kind === 'lesson' ? lesson.quiz : PRACTICE,
-    q: 0, hearts: 5, earned: 0, firstTryCount: 0,
+    q: 0, hearts: 5, earned: 0, firstTryCount: 0, combo: 0, bestCombo: 0,
   };
   startQuestion(run);
   return run;
 }
 function startQuestion(run) {
   const q = run.questions[run.q];
-  Object.assign(run, { picked: null, order: [], checked: false, firstTry: true, lastEarned: 0, praise: '' });
+  Object.assign(run, { picked: null, order: [], checked: false, firstTry: true, lastEarned: 0, praise: '', justLost: false });
   run.shuffle = q && q.type === 'order' ? shuffled(q.items.length) : null;
 }
 
@@ -438,10 +439,12 @@ function quizScreen(run) {
   } else {
     const opts = optionsFor(q);
     const long = opts.some((o) => o.length > 14);
-    body = `<div class="options${long ? ' long' : ''}" role="group" aria-label="Answers">${opts.map((o) => {
+    body = `<div class="options${long ? ' long' : ''}" role="group" aria-label="Answers">${opts.map((o, idx) => {
       let cls = 'option';
       if (run.picked === o) cls += run.checked ? (o === answerLabel(q) ? ' right' : ' wrong') : ' selected';
-      return `<button type="button" class="${cls}" data-action="pick" data-value="${esc(o)}" aria-pressed="${run.picked === o}"${run.checked ? ' disabled' : ''}>${o}</button>`;
+      // After a right answer, fade the other options.
+      if (run.checked && isCorrect(q, run) && run.picked !== o) cls += ' dim';
+      return `<button type="button" class="${cls}" data-action="pick" data-value="${esc(o)}" aria-pressed="${run.picked === o}"${run.checked ? ' disabled' : ''}><span class="opt-key" aria-hidden="true">${idx + 1}</span>${o}</button>`;
     }).join('')}</div>`;
   }
 
@@ -450,7 +453,8 @@ function quizScreen(run) {
   <header class="lesson-top">
     <a class="icon-btn" href="${closeHref}" aria-label="Close quiz">${stroke(ICON.close, 22, 'currentColor', 2.6)}</a>
     <div class="progress" role="progressbar" aria-label="Quiz progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><div style="width: ${pct}%"></div></div>
-    <span class="hearts">${HEART()}${run.hearts}<span class="sr"> hearts left</span></span>
+    <span class="hearts${run.justLost ? ' lost' : ''}">${HEART()}${run.hearts}<span class="sr"> hearts left</span></span>
+    <button type="button" class="icon-btn sound-btn" data-action="toggle-sound" aria-pressed="${state.sound}" aria-label="Sound effects">${stroke(state.sound ? ICON.speaker : ICON.mute, 22)}</button>
   </header>
   <span class="tag" style="background: ${s.tint}; color: ${s.text}">${stroke(s.icon, 16, s.color, 2.4)} ${tagText}</span>
   <h1 class="question">${q.prompt}</h1>
@@ -470,7 +474,8 @@ function quizFooter(run, q) {
     const last = run.q === run.questions.length - 1;
     return `
 <footer class="sheet good" role="status">
-  <div class="sheet-head"><span class="badge">${stroke(ICON.check, 22, '#fff', 3)}</span><strong>${run.praise} +${run.lastEarned} ink</strong></div>
+  <div class="sheet-head"><span class="badge">${stroke(ICON.check, 22, '#fff', 3)}</span><strong>${run.praise} <span class="ink-pop">+${run.lastEarned} ink</span></strong></div>
+  ${run.combo >= 2 && run.firstTry ? `<span class="combo">${FLAME(16)} ${run.combo} in a row!</span>` : ''}
   <p>${q.explain || ''}</p>
   <button type="button" class="btn-primary green" data-action="next-q" data-autofocus>${last ? 'Finish' : 'Continue'}</button>
 </footer>`;
@@ -511,7 +516,7 @@ function doneScreen(run) {
   <div class="stats">
     <div class="stat"><b>${run.firstTryCount}/${total}</b><span>first try</span></div>
     <div class="stat"><b>+${run.earned}</b><span>ink drops</span></div>
-    <div class="stat"><b>${state.streak}</b><span>day streak</span></div>
+    <div class="stat"><b>${run.bestCombo}</b><span>best in a row</span></div>
   </div>
   ${next
     ? `<a class="btn-primary" href="#lesson/${next.id}" data-autofocus>Next: ${next.title}</a>`
@@ -642,6 +647,42 @@ function route() {
   app.querySelector('.screen')?.scrollTo(0, 0);
 }
 
+// ---------------------------------------------------------------- feedback effects
+
+function play(name) {
+  if (state.sound) sfx(name);
+}
+
+function vibrate(pattern) {
+  if (!state.sound || !navigator.vibrate) return;
+  try { navigator.vibrate(pattern); } catch { /* not allowed */ }
+}
+
+// A burst of confetti from the centre of `fromEl` (or the middle of the screen).
+function celebrate(fromEl, count = 18) {
+  if (reduceMotion) return;
+  const box = app.getBoundingClientRect();
+  const r = fromEl ? fromEl.getBoundingClientRect() : { left: box.left + box.width / 2, top: box.top + box.height / 3, width: 0, height: 0 };
+  const x = r.left - box.left + r.width / 2;
+  const y = r.top - box.top + r.height / 2;
+  const colors = ['#6C4CF1', '#FF7A59', '#F5A524', '#12A594', '#3E63DD', '#D6409F'];
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('span');
+    p.className = 'confetti';
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 50 + Math.random() * 100;
+    p.style.left = `${x}px`;
+    p.style.top = `${y}px`;
+    p.style.background = colors[i % colors.length];
+    p.style.setProperty('--dx', `${(Math.cos(angle) * dist).toFixed(0)}px`);
+    p.style.setProperty('--dy', `${(Math.sin(angle) * dist - 50).toFixed(0)}px`);
+    p.style.setProperty('--rot', `${(Math.random() * 720 - 360).toFixed(0)}deg`);
+    if (i % 3 === 0) p.style.borderRadius = '50%';
+    app.appendChild(p);
+    setTimeout(() => p.remove(), 1100);
+  }
+}
+
 function showToast(msg) {
   app.querySelector('.toast')?.remove();
   const t = document.createElement('div');
@@ -728,38 +769,56 @@ const actions = {
     const run = state.run;
     if (run.checked) return;
     run.picked = el.dataset.value;
+    play('tap');
     render();
   },
   place(el) {
     const run = state.run;
     if (run.checked) return;
     run.order.push(Number(el.dataset.i));
+    play('tap');
     render();
   },
   unplace(el) {
     const run = state.run;
     if (run.checked) return;
     run.order = run.order.filter((i) => i !== Number(el.dataset.i));
+    play('tap');
     render();
   },
   check() {
     const run = state.run;
     const q = run.questions[run.q];
     run.checked = true;
-    if (isCorrect(q, run)) {
+    const correct = isCorrect(q, run);
+    if (correct) {
       run.lastEarned = run.firstTry ? 15 : 5;
       run.earned += run.lastEarned;
-      if (run.firstTry) run.firstTryCount += 1;
+      if (run.firstTry) {
+        run.firstTryCount += 1;
+        run.combo += 1;
+        run.bestCombo = Math.max(run.bestCombo, run.combo);
+      }
       run.praise = PRAISE[Math.floor(Math.random() * PRAISE.length)];
     } else {
       run.hearts = Math.max(0, run.hearts - 1);
       run.firstTry = false;
+      run.combo = 0;
+      run.justLost = true;
     }
     render();
+    if (correct) {
+      play(run.combo >= 3 ? 'combo' : 'correct');
+      vibrate(25);
+      celebrate(app.querySelector('.option.right, .order-answer.right'), run.combo >= 3 ? 30 : 18);
+    } else {
+      play('wrong');
+      vibrate([70, 50, 70]);
+    }
   },
   retry() {
     const run = state.run;
-    Object.assign(run, { picked: null, order: [], checked: false });
+    Object.assign(run, { picked: null, order: [], checked: false, justLost: false });
     render();
   },
   'next-q'() {
@@ -772,6 +831,18 @@ const actions = {
     }
     render();
     app.querySelector('.screen')?.scrollTo(0, 0);
+    if (run.phase === 'done') {
+      play('complete');
+      vibrate([30, 40, 30, 40, 60]);
+      setTimeout(() => celebrate(app.querySelector('.finish h1'), 46), 150);
+    }
+  },
+  'toggle-sound'() {
+    state.sound = !state.sound;
+    save();
+    render();
+    if (state.sound) play('tap');
+    showToast(state.sound ? 'Sound effects on' : 'Sound effects off');
   },
 
   // misc
@@ -826,12 +897,27 @@ app.addEventListener('pointerup', (e) => {
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) goSlide(dx < 0 ? 1 : -1);
 });
 
-// Arrow keys between slides on a computer.
+// Keyboard on a computer: arrows move between slides; in a quiz, 1–9 pick an
+// answer (or place the next item) and Enter checks / continues.
 document.addEventListener('keydown', (e) => {
-  if (!state.run || state.route.name !== 'lesson' || state.run.phase !== 'slides') return;
+  const run = state.run;
+  if (!run || (state.route.name !== 'lesson' && state.route.name !== 'practice')) return;
   if (e.target.closest && e.target.closest('input, textarea, select')) return;
-  if (e.key === 'ArrowRight') goSlide(1);
-  if (e.key === 'ArrowLeft') goSlide(-1);
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  if (run.phase === 'slides') {
+    if (e.key === 'ArrowRight') goSlide(1);
+    if (e.key === 'ArrowLeft') goSlide(-1);
+    return;
+  }
+  if (run.phase !== 'quiz') return;
+  if (/^[1-9]$/.test(e.key) && !run.checked) {
+    const n = Number(e.key) - 1;
+    const target = app.querySelectorAll('.options .option, .order-pool .chip')[n];
+    if (target) { e.preventDefault(); target.click(); }
+  } else if (e.key === 'Enter' && !(e.target.closest && e.target.closest('button, a'))) {
+    const btn = app.querySelector('.sheet .btn-primary:not(:disabled)');
+    if (btn) { e.preventDefault(); btn.click(); }
+  }
 });
 
 window.addEventListener('hashchange', route);
@@ -842,7 +928,7 @@ route();
 // GitHub Pages lets browsers reuse files for up to 10 minutes, so a phone can keep
 // running an old copy after a release. Compare with version.json (fetched fresh)
 // and reload once when a newer release is out. Bump APP_VERSION with every release.
-const APP_VERSION = '3';
+const APP_VERSION = '4';
 function checkForUpdate() {
   fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : null))
