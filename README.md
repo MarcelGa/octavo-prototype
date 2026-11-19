@@ -4,7 +4,7 @@
 
 A clickable phone prototype of Octavo, a universal learning app. Every subject ("arm") has a course; every lesson is an **interactive slide presentation** followed by a **quiz on what the slides taught**.
 
-It's plain HTML, CSS and JavaScript with no build step and no dependencies. Progress (completed lessons, ink drops, streak) is remembered in the browser; use **Reset demo** at the bottom of the Profile screen to start over.
+It's plain HTML, CSS and JavaScript with no build step and no dependencies. Progress (completed lessons, ink drops, streak, your chosen arms) is remembered in the browser; use **Reset demo** at the bottom of the Profile screen to start over.
 
 ## What's in the demo
 
@@ -15,13 +15,16 @@ It's plain HTML, CSS and JavaScript with no build step and no dependencies. Prog
 | Languages | Spanish: first conversations | Saying hello (with spoken audio) |
 | Code | Python: first steps | Variables and loops |
 | Physics | Forces and motion | Newton's three laws |
-| Math | Fractions | Fractions with pizza |
+| Communication | Communicate with confidence | 13 lessons: First impression hacks · Build trust with your voice · Confidence wins · Speak up in any room · Storytelling secrets · Body language · Read people like a pro · Give tough feedback fast · Handle difficult people smartly · Say “no” and be likable · Interrupt smoothly · Defuse any conflict · Listen like a leader (with spoken example phrases) |
 | Chemistry | Atoms and elements | Inside the atom |
 | Music | Reading music | Notes on the staff (with playable notes) |
+| Math | Fractions | Fractions with pizza |
+
+Otto has eight arms but there are nine subjects, so one rests at a time (Math, to begin with). Use **Swap arms** on the Home or Profile screen to train a resting subject in place of another; progress in every course is kept.
 
 Plus **Today's mix**, a quick 3-question quiz across subjects (Practice tab).
 
-**Slide features:** animated illustrations, tap-to-explore hotspots, replayable animations, sliders and simulators (threshold gauge, Ohm's law circuit, F = m × a cart, pizza fractions, atom builder), flip cards, text-to-speech phrases, a playable piano and a line-by-line Python stepper. Swipe or use the arrow keys to move between slides.
+**Slide features:** animated illustrations, tap-to-explore hotspots, replayable animations, sliders and simulators (threshold gauge, Ohm's law circuit, F = m × a cart, pizza fractions, atom builder), flip cards, text-to-speech phrases (Spanish and English), a playable piano and a line-by-line Python stepper. Swipe or use the arrow keys to move between slides.
 
 **Quiz:** multiple choice (with pictures, code or audio), true/false and put-in-order questions, with sound effects, confetti, hearts and an "in a row" streak. On a computer, press 1–9 to answer and Enter to continue.
 

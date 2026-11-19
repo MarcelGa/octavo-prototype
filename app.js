@@ -15,14 +15,27 @@ const { courses, speak, tone, sfx, NOTE } = window.Octavo;
 const SUBJECTS = [
   { name: 'Languages', topic: 'Spanish',   level: 7, color: '#E8613F', tint: '#FFE9E2', text: '#9A3A1F', icon: 'M4 5h16v10H9l-5 4z' },
   { name: 'Medicine',  topic: 'Nervous system', level: 3, color: '#E5484D', tint: '#FDE7E8', text: '#9B2226', icon: 'M3 12h4l2-5 4 10 2-5h6' },
-  { name: 'Math',      topic: 'Fractions', level: 9, color: '#3E63DD', tint: '#E6ECFC', text: '#2A44A8', icon: 'M17 5H7l6 7-6 7h10' },
+  { name: 'Communication', topic: 'Soft skills', level: 1, color: '#0090C1', tint: '#E1F3FA', text: '#00668A', icon: 'M9 11a3 3 0 1 0 0-6a3 3 0 0 0 0 6M3 20c.7-3.5 3-5 6-5s5.3 1.5 6 5M16 8a4 4 0 0 1 0 6M19 5a8 8 0 0 1 0 12' },
   { name: 'Physics',   topic: 'Motion',    level: 4, color: '#8E4EC6', tint: '#F1E8FA', text: '#6A2E9E', icon: 'M12 9a3 3 0 1 0 0.01 0M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8' },
   { name: 'Circuits',  topic: "Ohm's law", level: 5, color: '#D18A00', tint: '#FEF3DD', text: '#7A5000', icon: 'M13 3L5 14h6l-1 7 8-11h-6z' },
   { name: 'Code',      topic: 'Python',    level: 6, color: '#12A594', tint: '#DDF5F1', text: '#0B6B60', icon: 'M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14' },
   { name: 'Chemistry', topic: 'Atoms',     level: 2, color: '#30A46C', tint: '#E0F4E8', text: '#1C6B45', icon: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3' },
   { name: 'Music',     topic: 'Notes',     level: 1, color: '#D6409F', tint: '#FBE6F3', text: '#962A6E', icon: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 1 1 6 0M20 16a3 3 0 1 1-6 0a3 3 0 1 1 6 0' },
+  { name: 'Math',      topic: 'Fractions', level: 9, color: '#3E63DD', tint: '#E6ECFC', text: '#2A44A8', icon: 'M17 5H7l6 7-6 7h10' },
 ];
 const subject = (name) => SUBJECTS.find((s) => s.name === name);
+
+// Otto has eight arms but there are more subjects: the learner picks which eight
+// they're training (state.arms) and can swap any of them for a resting subject.
+const ARM_COUNT = 8;
+const DEFAULT_ARMS = SUBJECTS.slice(0, ARM_COUNT).map((s) => s.name);
+function validArms(list) {
+  const names = (Array.isArray(list) ? list : []).filter((n, i, a) => subject(n) && a.indexOf(n) === i).slice(0, ARM_COUNT);
+  for (const n of DEFAULT_ARMS) if (names.length < ARM_COUNT && !names.includes(n)) names.push(n);
+  return names;
+}
+const armSubjects = () => state.arms.map(subject);
+const restingSubjects = () => SUBJECTS.filter((s) => !state.arms.includes(s.name));
 
 // Index every lesson and remember which course it belongs to.
 const ALL_LESSONS = [];
@@ -104,6 +117,7 @@ const ICON = {
   mute: 'M4 9h4l5-4v14l-5-4H4zM17 9l5 6M22 9l-5 6',
   lock: 'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3',
   slides: 'M4 5h16v11H4zM9 20h6M12 16v4',
+  swap: 'M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7',
   music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 1 1 6 0M20 16a3 3 0 1 1-6 0a3 3 0 1 1 6 0',
 };
 const stroke = (d, size = 24, color = 'currentColor', width = 2.2) =>
@@ -117,19 +131,20 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 // ---------------------------------------------------------------- state
 
 const STORE_KEY = 'octavo-prototype-v2';
-const defaults = () => ({ ink: 340, streak: 12, lessons: 38, doneToday: false, completed: {}, lastCourse: 'nervous-system', sound: true });
+const defaults = () => ({ ink: 340, streak: 12, lessons: 38, doneToday: false, completed: {}, lastCourse: 'nervous-system', sound: true, arms: [...DEFAULT_ARMS] });
 
 function loadSaved() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
 }
 function save() {
   try {
-    const { ink, streak, lessons, doneToday, completed, lastCourse, sound } = state;
-    localStorage.setItem(STORE_KEY, JSON.stringify({ ink, streak, lessons, doneToday, completed, lastCourse, sound }));
+    const { ink, streak, lessons, doneToday, completed, lastCourse, sound, arms } = state;
+    localStorage.setItem(STORE_KEY, JSON.stringify({ ink, streak, lessons, doneToday, completed, lastCourse, sound, arms }));
   } catch { /* storage blocked: the demo still works, it just won't remember */ }
 }
 
-const state = { route: { name: 'home' }, ...defaults(), ...loadSaved(), run: null };
+const state = { route: { name: 'home' }, ...defaults(), ...loadSaved(), run: null, swapIn: null };
+state.arms = validArms(state.arms);
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function shuffled(n) {
@@ -183,11 +198,13 @@ const lessonMeta = (l) => `${plural(l.slides.length, 'slide')} · ${plural(l.qui
 // ---------------------------------------------------------------- home
 
 function homeScreen() {
-  const featured = courseById(state.lastCourse) || courses[0];
+  const trained = armSubjects().map((sub) => courseFor(sub.name));
+  const last = courseById(state.lastCourse);
+  const featured = trained.includes(last) ? last : trained[0];
   let course = featured;
   let next = nextLessonIn(course);
   if (!next) {
-    course = courses.find((c) => nextLessonIn(c)) || featured;
+    course = trained.find((c) => nextLessonIn(c)) || featured;
     next = nextLessonIn(course);
   }
   const s = course.subjectInfo;
@@ -233,9 +250,12 @@ function homeScreen() {
     ${stroke('M9 6l6 6-6 6', 20, '#4A4566')}
   </a>
 
-  <h3 class="section-title">Your eight arms</h3>
+  <div class="section-row">
+    <h3 class="section-title">Your eight arms</h3>
+    <a class="link-btn" href="#arms">${stroke(ICON.swap, 16)} Swap arms</a>
+  </div>
   <div class="arms">
-    ${SUBJECTS.map((sub) => {
+    ${armSubjects().map((sub) => {
       const c = courseFor(sub.name);
       const total = courseLessons(c).length;
       const done = courseDone(c);
@@ -525,6 +545,49 @@ function doneScreen(run) {
 </main>`;
 }
 
+// ---------------------------------------------------------------- arms (pick the eight trained subjects)
+
+function armsScreen() {
+  const picking = state.swapIn ? subject(state.swapIn) : null;
+  const row = (sub, action) => {
+    const c = courseFor(sub.name);
+    const picked = state.swapIn === sub.name;
+    return `
+    <li><button type="button" class="arm arm-row${picked ? ' picked' : ''}${action === 'swap-arm' && picking ? ' target' : ''}" data-action="${action}" data-name="${sub.name}"${action === 'pick-resting' ? ` aria-pressed="${picked}"` : ''}>
+      <span class="arm-head">
+        <span class="arm-icon" style="background: ${sub.tint}">${stroke(sub.icon, 18, sub.color)}</span>
+        <span class="arm-text">
+          <span class="arm-name">${sub.name}</span>
+          <span class="arm-meta">${c.title} · ${courseDone(c)}/${courseLessons(c).length} lessons</span>
+        </span>
+        <span class="arm-action">${action === 'pick-resting' ? (picked ? 'Picked' : 'Train') : picking ? 'Replace' : ''}</span>
+      </span>
+    </button></li>`;
+  };
+  const resting = restingSubjects();
+  return `
+<main class="screen arms-screen">
+  <header class="course-top">
+    <a class="icon-btn" href="#progress" aria-label="Back to profile">${stroke(ICON.back, 24, 'currentColor', 2.6)}</a>
+  </header>
+  <header class="page-head">
+    <h1>Swap arms</h1>
+    <p>Otto trains eight subjects at a time. Swap one out whenever you like: your progress in every course is kept.</p>
+  </header>
+
+  <h3 class="section-title">Resting subjects</h3>
+  ${resting.length ? `<ul class="arm-list">${resting.map((sub) => row(sub, 'pick-resting')).join('')}</ul>` : '<p class="muted">Every subject is being trained.</p>'}
+
+  <p class="swap-hint" aria-live="polite">${picking
+    ? `Now tap the arm that <b>${picking.name}</b> should replace.`
+    : 'Tap a resting subject to start training it.'}</p>
+
+  <h3 class="section-title">Your eight arms</h3>
+  <ul class="arm-list">${armSubjects().map((sub) => row(sub, 'swap-arm')).join('')}</ul>
+</main>
+${tabbar('progress')}`;
+}
+
 // ---------------------------------------------------------------- progress (nine brains)
 
 const RING = [[135, 5], [227, 43], [265, 135], [227, 227], [135, 265], [43, 227], [5, 135], [43, 43]]
@@ -555,7 +618,7 @@ function progressScreen() {
       </g>
     </svg>
     <div class="brain-center">${ottoFace()}</div>
-    ${SUBJECTS.map((s, i) => {
+    ${armSubjects().map((s, i) => {
       const c = courseFor(s.name);
       return `
     <a class="node" href="#course/${c.id}" style="left: ${RING[i][0]}%; top: ${RING[i][1]}%; border-color: ${s.color}" aria-label="${s.name}, level ${s.level}, ${courseDone(c)} of ${courseLessons(c).length} lessons done">
@@ -563,6 +626,7 @@ function progressScreen() {
     </a>`;
     }).join('')}
   </div>
+  <a class="btn-secondary manage-arms" href="#arms">${stroke(ICON.swap, 18)} Swap arms</a>
 
   <section class="card" aria-label="Streak">
     <div class="card-head">${FLAME(22)}${state.streak}-day streak</div>
@@ -595,6 +659,7 @@ function render() {
       : run.phase === 'quiz' ? quizScreen(run)
       : doneScreen(run);
   } else if (r.name === 'progress') html = progressScreen();
+  else if (r.name === 'arms') html = armsScreen();
   else html = homeScreen();
 
   app.innerHTML = html;
@@ -620,7 +685,7 @@ function parseHash() {
   if (name === 'course' && courseById(id)) return { name, id };
   if (name === 'lesson' && id && lessonById(id)) return { name, id };
   if (name === 'lesson' || name === 'practice') return { name: 'practice' };
-  if (name === 'progress') return { name };
+  if (name === 'progress' || name === 'arms') return { name };
   return { name: 'home' };
 }
 
@@ -641,6 +706,7 @@ function route() {
     state.lastCourse = next.id;
     save();
   }
+  if (next.name !== 'arms') state.swapIn = null;
   state.route = next;
   if (window.speechSynthesis) window.speechSynthesis.cancel();
   render();
@@ -845,6 +911,24 @@ const actions = {
     showToast(state.sound ? 'Sound effects on' : 'Sound effects off');
   },
 
+  // arms
+  'pick-resting'(el) {
+    state.swapIn = state.swapIn === el.dataset.name ? null : el.dataset.name;
+    play('tap');
+    render();
+  },
+  'swap-arm'(el) {
+    if (!state.swapIn) { showToast('First pick a subject to train'); return; }
+    const out = el.dataset.name;
+    const into = state.swapIn;
+    state.arms = state.arms.map((n) => (n === out ? into : n));
+    state.swapIn = null;
+    save();
+    play('correct');
+    render();
+    showToast(`${into} replaced ${out}. Progress is kept.`);
+  },
+
   // misc
   reset() {
     try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
@@ -928,7 +1012,7 @@ route();
 // GitHub Pages lets browsers reuse files for up to 10 minutes, so a phone can keep
 // running an old copy after a release. Compare with version.json (fetched fresh)
 // and reload once when a newer release is out. Bump APP_VERSION with every release.
-const APP_VERSION = '4';
+const APP_VERSION = '5';
 function checkForUpdate() {
   fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : null))
