@@ -2,10 +2,12 @@
 
 /* Otto's Memory (kids and adults, any subject). Cards face down; find each term and its meaning.
    No timer; the score just counts how few turns it took. */
+(() => {
+const { t } = window.Octavo;
 window.Octavo.addGame({
   id: 'memory',
-  title: 'Otto’s Memory',
-  blurb: 'Flip the cards and find the pairs.',
+  title: t('g.memory.title'),
+  blurb: t('g.memory.blurb'),
   audiences: ['kids', 'adult'],
   kinds: ['any', 'language'],
   styles: ['calm', 'playful'],
@@ -19,10 +21,10 @@ window.Octavo.addGame({
     let turns = 0;
     let busy = false;
 
-    const hud = () => ctx.hud(`<span class="g-count">${found}/${chosen.length} pairs</span>`);
+    const hud = () => ctx.hud(`<span class="g-count">${t('g.memory.pairs', { found, total: chosen.length })}</span>`);
     hud();
     root.innerHTML = `<div class="g-memory">${cards.map((c, i) => `
-      <button type="button" class="g-card" data-g="flip" data-i="${i}" aria-label="Card ${i + 1}, face down">
+      <button type="button" class="g-card" data-g="flip" data-i="${i}" aria-label="${esc(t('g.memory.card', { n: i + 1 }))}">
         <span class="g-card-inner"><span class="g-card-back" aria-hidden="true">?</span><span class="g-card-face"${c.side === 'a' && c.p.lang ? ` lang="${esc(c.p.lang.slice(0, 2))}"` : ''}>${esc(c.text)}</span></span>
       </button>`).join('')}</div>`;
 
@@ -53,10 +55,11 @@ window.Octavo.addGame({
       } else {
         busy = true;
         ctx.later(() => {
-          pairEls.forEach((b) => { b.classList.remove('up'); b.setAttribute('aria-label', 'Card face down'); });
+          pairEls.forEach((b) => { b.classList.remove('up'); b.setAttribute('aria-label', t('g.memory.down')); });
           busy = false;
         }, 1100);
       }
     });
   },
 });
+})();

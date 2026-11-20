@@ -3,10 +3,12 @@
 /* Chain (adults). Rebuild a sequence from the lesson by moving links up and down.
    "Check" lights up the links already in the right place, so you can reason it out.
    Fewer checks score higher; there is no clock. */
+(() => {
+const { t, tn } = window.Octavo;
 window.Octavo.addGame({
   id: 'chain',
-  title: 'Chain',
-  blurb: 'Put the steps back in order. Fewer checks, more points.',
+  title: t('g.chain.title'),
+  blurb: t('g.chain.blurb'),
   audiences: ['adult'],
   kinds: ['logic', 'science', 'skills'],
   styles: ['calm', 'academic'],
@@ -21,7 +23,7 @@ window.Octavo.addGame({
     let total = 0;
     let locked = new Set();
 
-    const hud = () => ctx.hud(`<span class="g-count">Chain ${s + 1}/${seqs.length}</span><span class="g-count">${checks} checks</span>`);
+    const hud = () => ctx.hud(`<span class="g-count">${t('g.chain.n', { n: s + 1, total: seqs.length })}</span><span class="g-count">${tn('g.chain.checks', checks)}</span>`);
 
     function start() {
       const n = seqs[s].items.length;
@@ -41,12 +43,12 @@ window.Octavo.addGame({
             <span class="g-link-n">${k + 1}</span>
             <span class="g-link-t">${esc(seq.items[v])}</span>
             <span class="g-link-btns">
-              <button type="button" data-g="up" data-k="${k}" aria-label="Move up"${k === 0 || locked.has(k) ? ' disabled' : ''}>▲</button>
-              <button type="button" data-g="down" data-k="${k}" aria-label="Move down"${k === order.length - 1 || locked.has(k) ? ' disabled' : ''}>▼</button>
+              <button type="button" data-g="up" data-k="${k}" aria-label="${esc(t('g.chain.up'))}"${k === 0 || locked.has(k) ? ' disabled' : ''}>▲</button>
+              <button type="button" data-g="down" data-k="${k}" aria-label="${esc(t('g.chain.down'))}"${k === order.length - 1 || locked.has(k) ? ' disabled' : ''}>▼</button>
             </span>
           </li>`).join('')}
         </ol>
-        <button type="button" class="btn-primary" data-g="check">Check the chain</button>`;
+        <button type="button" class="btn-primary" data-g="check">${t('g.chain.check')}</button>`;
     }
 
     root.addEventListener('click', (e) => {
@@ -76,7 +78,7 @@ window.Octavo.addGame({
           ctx.later(() => {
             s += 1;
             if (s < seqs.length) start();
-            else ctx.finish({ score: total, max: seqs.length * MAX_PER, label: `${seqs.length} ${seqs.length === 1 ? 'chain' : 'chains'} rebuilt` });
+            else ctx.finish({ score: total, max: seqs.length * MAX_PER, label: tn('g.chain.rebuilt', seqs.length) });
           }, 1100);
         } else {
           ctx.sfx('wrong');
@@ -88,3 +90,4 @@ window.Octavo.addGame({
     start();
   },
 });
+})();

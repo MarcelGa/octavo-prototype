@@ -2,10 +2,12 @@
 
 /* Bubble Pop (kids, languages). Otto says a word; pop the bubble with its meaning.
    No timer and no fail state: a wrong bubble just wobbles. */
+(() => {
+const { t } = window.Octavo;
 window.Octavo.addGame({
   id: 'bubble-pop',
-  title: 'Bubble Pop',
-  blurb: 'Listen to Otto and pop the bubble that matches.',
+  title: t('g.bubble.title'),
+  blurb: t('g.bubble.blurb'),
   audiences: ['kids'],
   kinds: ['language'],
   styles: ['playful'],
@@ -25,13 +27,13 @@ window.Octavo.addGame({
       const others = sample(pool.filter((p) => p !== target), 2);
       const options = shuffle([target, ...others]);
       missed = false;
-      ctx.hud(`<span class="g-dots" aria-label="Round ${r + 1} of ${rounds.length}">${rounds.map((_, i) => `<i class="${i < r ? 'on' : i === r ? 'now' : ''}"></i>`).join('')}</span>`);
+      ctx.hud(`<span class="g-dots" aria-label="${esc(t('g.bubble.round', { n: r + 1, total: rounds.length }))}">${rounds.map((_, i) => `<i class="${i < r ? 'on' : i === r ? 'now' : ''}"></i>`).join('')}</span>`);
       root.innerHTML = `
         <div class="g-prompt">
-          <button type="button" class="g-listen" data-g="say" aria-label="Listen again">
+          <button type="button" class="g-listen" data-g="say" aria-label="${esc(t('g.bubble.listen'))}">
             <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg>
           </button>
-          <p><b lang="${esc(target.lang.slice(0, 2))}">${esc(target.a)}</b><small>Which one is it?</small></p>
+          <p><b lang="${esc(target.lang.slice(0, 2))}">${esc(target.a)}</b><small>${t('g.bubble.which')}</small></p>
         </div>
         <div class="g-bubbles">${options.map((o, i) => `
           <button type="button" class="g-bubble" style="animation-delay: ${i * 0.4}s" data-g="pop" data-ok="${o === target}">${esc(o.b)}</button>`).join('')}
@@ -65,3 +67,4 @@ window.Octavo.addGame({
     draw();
   },
 });
+})();

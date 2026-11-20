@@ -2,10 +2,12 @@
 
 /* Fact or Fiction (adults). Judge statements from the lesson as fast as you like;
    a run of right answers multiplies the points. Every miss explains itself. */
+(() => {
+const { t } = window.Octavo;
 window.Octavo.addGame({
   id: 'fact-or-fiction',
-  title: 'Fact or Fiction',
-  blurb: 'True or made up? Build a streak to multiply your points.',
+  title: t('g.fact.title'),
+  blurb: t('g.fact.blurb'),
   audiences: ['adult'],
   kinds: ['science', 'skills', 'logic', 'arts', 'any'],
   styles: ['academic', 'competitive'],
@@ -16,9 +18,9 @@ window.Octavo.addGame({
     // A fair deck: about half facts, half fiction, at most 8 cards.
     const yes = shuffle(facts.filter((f) => f.truth));
     const no = shuffle(facts.filter((f) => !f.truth));
-    const t = yes.slice(0, 4);
-    const f = no.slice(0, 8 - t.length);
-    const deck = shuffle([...t, ...f, ...yes.slice(4, 4 + 8 - t.length - f.length)]);
+    const truths = yes.slice(0, 4);
+    const f = no.slice(0, 8 - truths.length);
+    const deck = shuffle([...truths, ...f, ...yes.slice(4, 4 + 8 - truths.length - f.length)]);
     let i = 0;
     let right = 0;
     let streak = 0;
@@ -26,7 +28,7 @@ window.Octavo.addGame({
     let waiting = false;
 
     const mult = () => Math.min(1 + Math.floor(streak / 2), 4);
-    const hud = () => ctx.hud(`<span class="g-count">${i + 1}/${deck.length}</span><span class="g-mult">×${mult()}</span><span class="g-count">${points} pts</span>`);
+    const hud = () => ctx.hud(`<span class="g-count">${i + 1}/${deck.length}</span><span class="g-mult">×${mult()}</span><span class="g-count">${t('pts', { n: points })}</span>`);
 
     function draw() {
       const f = deck[i];
@@ -38,8 +40,8 @@ window.Octavo.addGame({
           ${f.answer ? `<p class="g-claim-answer">→ ${esc(f.answer)}</p>` : ''}
         </div>
         <div class="g-yesno">
-          <button type="button" class="g-yes" data-g="true">Fact</button>
-          <button type="button" class="g-no" data-g="false">Fiction</button>
+          <button type="button" class="g-yes" data-g="true">${t('g.fact.fact')}</button>
+          <button type="button" class="g-no" data-g="false">${t('g.fact.fiction')}</button>
         </div>
         <div class="g-explain" aria-live="polite"></div>`;
     }
@@ -47,7 +49,7 @@ window.Octavo.addGame({
     const next = () => {
       i += 1;
       if (i < deck.length) draw();
-      else ctx.finish({ score: right, max: deck.length, points, label: `${right}/${deck.length} right` });
+      else ctx.finish({ score: right, max: deck.length, points, label: t('g.fact.right', { n: right, total: deck.length }) });
     };
 
     root.addEventListener('click', (e) => {
@@ -72,11 +74,12 @@ window.Octavo.addGame({
         ctx.sfx('wrong');
         hud();
         root.querySelector('.g-explain').innerHTML = `
-          <p><b>${f.truth ? 'It’s a fact.' : 'It’s fiction.'}</b> ${esc(f.explain || '')}</p>
-          <button type="button" class="btn-primary small" data-g="next">Continue</button>`;
+          <p><b>${f.truth ? t('g.fact.isFact') : t('g.fact.isFiction')}</b> ${esc(f.explain || '')}</p>
+          <button type="button" class="btn-primary small" data-g="next">${t('g.fact.continue')}</button>`;
       }
     });
 
     draw();
   },
 });
+})();

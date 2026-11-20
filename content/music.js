@@ -25,105 +25,136 @@
     </g>`;
   }
 
-  const LINE_NOTES = `
-  <svg viewBox="0 0 320 200" role="img" aria-label="A treble staff. Notes appear one by one on the five lines, bottom to top: E, G, B, D, F.">
+  // Note letter for display: Slovak names B as H (C D E F G A H).
+  const nm = (n, lang) => (lang === 'sk' && n[0] === 'B' ? 'H' : n[0]);
+
+  const lineNotes = (lang) => `
+  <svg viewBox="0 0 320 200" role="img" aria-label="${lang === 'sk' ? 'Notová osnova s husľovým kľúčom. Na piatich líniách sa postupne zdola nahor objavujú noty E, G, H, D, F.' : 'A treble staff. Notes appear one by one on the five lines, bottom to top: E, G, B, D, F.'}">
     ${LINES}${CLEF}
-    ${['E4', 'G4', 'B4', 'D5', 'F5'].map((n, i) => note(110 + i * 42, n, { cls: 'a-reveal', delay: 0.3 + i * 0.5, label: n[0] })).join('')}
+    ${['E4', 'G4', 'B4', 'D5', 'F5'].map((n, i) => note(110 + i * 42, n, { cls: 'a-reveal', delay: 0.3 + i * 0.5, label: nm(n, lang) })).join('')}
   </svg>`;
 
-  const KEYS_ART = `
-  <svg viewBox="0 0 320 200" role="img" aria-label="A treble staff showing the note you play on the keyboard below.">
+  const keysArt = (lang) => `
+  <svg viewBox="0 0 320 200" role="img" aria-label="${lang === 'sk' ? 'Notová osnova s husľovým kľúčom, ktorá ukazuje tón zahraný na klávesoch pod ňou.' : 'A treble staff showing the note you play on the keyboard below.'}">
     ${LINES}${CLEF}
     <g class="played"></g>
   </svg>`;
 
   const SCALE = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
-  const SCALE_ART = `
-  <svg viewBox="0 0 320 200" role="img" aria-label="The C major scale: eight notes climbing step by step up the staff.">
+  const scaleArt = (lang) => `
+  <svg viewBox="0 0 320 200" role="img" aria-label="${lang === 'sk' ? 'Stupnica C dur: osem nôt stúpa krok za krokom nahor po osnove.' : 'The C major scale: eight notes climbing step by step up the staff.'}">
     ${LINES}${CLEF}
     <g class="scale-notes">${SCALE.map((n, i) => note(102 + i * 27, n, { cls: 'a-reveal', delay: 0.2 + i * 0.3 })).join('')}</g>
   </svg>`;
 
-  const QUIZ_NOTE = `<svg viewBox="0 0 320 200" role="img" aria-label="A single note sitting on the middle line of the treble staff.">${LINES}${CLEF}${note(190, 'B4', { color: '#D6409F' })}</svg>`;
+  const keysHtml = (lang) => `<div class="keys" role="group" aria-label="${lang === 'sk' ? 'Klávesy klavíra' : 'Piano keys'}">${SCALE.map((n) => `<button type="button" class="key" data-note="${n}">${nm(n, lang)}</button>`).join('')}</div>`;
+
+  const quizNote = (lang) => `<svg viewBox="0 0 320 200" role="img" aria-label="${lang === 'sk' ? 'Jedna nota na strednej línii notovej osnovy s husľovým kľúčom.' : 'A single note sitting on the middle line of the treble staff.'}">${LINES}${CLEF}${note(190, 'B4', { color: '#D6409F' })}</svg>`;
 
   window.Octavo.addCourse({
     id: 'notes',
     subject: 'Music',
     audience: 'adult',
     lecturer: 'mara',
-    title: 'Reading music',
-    blurb: 'Learn the treble staff, hear every note and train your ear.',
+    title: { en: 'Reading music', sk: 'Čítanie nôt' },
+    blurb: { en: 'Learn the treble staff, hear every note and train your ear.', sk: 'Spoznaj notovú osnovu s husľovým kľúčom, vypočuj si každú notu a trénuj sluch.' },
     artBg: '#FFF7FB',
     units: [
       {
-        title: 'The staff',
+        title: { en: 'The staff', sk: 'Notová osnova' },
         lessons: [
           {
             id: 'mu-notes',
-            title: 'Notes on the staff',
+            title: { en: 'Notes on the staff', sk: 'Noty v notovej osnove' },
             minutes: 4,
             slides: [
               {
-                title: 'Five lines, many notes',
-                art: LINE_NOTES,
-                text: '<p>Music is written on a <b>staff</b> of five lines. The swirly <b>treble clef</b> tells you which notes they are. From the bottom, the lines are <b>E, G, B, D, F</b>: “<b>E</b>very <b>G</b>ood <b>B</b>oy <b>D</b>oes <b>F</b>ine”.</p>',
+                title: { en: 'Five lines, many notes', sk: 'Päť línií, veľa nôt' },
+                art: { en: lineNotes('en'), sk: lineNotes('sk') },
+                text: {
+                  en: '<p>Music is written on a <b>staff</b> of five lines. The swirly <b>treble clef</b> tells you which notes they are. From the bottom, the lines are <b>E, G, B, D, F</b>: “<b>E</b>very <b>G</b>ood <b>B</b>oy <b>D</b>oes <b>F</b>ine”.</p>',
+                  sk: '<p>Hudba sa zapisuje do <b>notovej osnovy</b> s piatimi líniami. Zatočený <b>husľový kľúč</b> ti prezradí, ktoré tóny na nich ležia. Odspodu sú to línie <b>E, G, H, D, F</b>.</p>',
+                },
               },
               {
-                title: 'Play and see',
-                art: KEYS_ART,
-                controls: `<div class="keys" role="group" aria-label="Piano keys">${SCALE.map((n) => `<button type="button" class="key" data-note="${n}">${n[0]}</button>`).join('')}</div>`,
-                text: '<p>Tap a key: you’ll hear the note and see where it sits on the staff. Middle C needs its own little extra line, called a ledger line.</p>',
+                title: { en: 'Play and see', sk: 'Zahraj a pozri' },
+                art: { en: keysArt('en'), sk: keysArt('sk') },
+                controls: { en: keysHtml('en'), sk: keysHtml('sk') },
+                text: {
+                  en: '<p>Tap a key: you’ll hear the note and see where it sits on the staff. Middle C needs its own little extra line, called a ledger line.</p>',
+                  sk: '<p>Ťukni na kláves: začuješ tón a uvidíš, kde leží v osnove. Jednočiarkované C potrebuje vlastnú malú líniu navyše, ktorá sa volá pomocná línia.</p>',
+                },
                 setup(root, api) {
+                  const lang = api && api.lang === 'sk' ? 'sk' : 'en';
                   const played = root.querySelector('.played');
                   root.querySelectorAll('.key').forEach((k) => k.addEventListener('click', () => {
                     const n = k.dataset.note;
-                    if (!api.tone([[NOTE[n], 0.6]])) api.toast('Audio isn’t available on this device');
-                    played.innerHTML = note(190, n, { color: '#D6409F', label: n === 'C4' ? 'middle C' : n[0], cls: 'a-reveal', delay: 0 });
+                    if (!api.tone([[NOTE[n], 0.6]])) api.toast(lang === 'sk' ? 'Zvuk nie je na tomto zariadení dostupný' : 'Audio isn’t available on this device');
+                    played.innerHTML = note(190, n, { color: '#D6409F', label: n === 'C4' ? (lang === 'sk' ? 'c1' : 'middle C') : nm(n, lang), cls: 'a-reveal', delay: 0 });
                     root.querySelectorAll('.key').forEach((b) => b.classList.toggle('active', b === k));
                   }));
                 },
               },
               {
-                title: 'Higher on the staff, higher in pitch',
-                art: SCALE_ART,
-                controls: '<div class="control"><button type="button" class="btn-chip scale-btn">Play the scale</button></div>',
-                text: '<p>Each step up the staff, from a line to the next space or from a space to the next line, is the next note up. These eight notes are the <b>C major scale</b>: C D E F G A B C.</p>',
+                title: { en: 'Higher on the staff, higher in pitch', sk: 'Vyššie v osnove, vyšší tón' },
+                art: { en: scaleArt('en'), sk: scaleArt('sk') },
+                controls: {
+                  en: '<div class="control"><button type="button" class="btn-chip scale-btn">Play the scale</button></div>',
+                  sk: '<div class="control"><button type="button" class="btn-chip scale-btn">Zahraj stupnicu</button></div>',
+                },
+                text: {
+                  en: '<p>Each step up the staff, from a line to the next space or from a space to the next line, is the next note up. These eight notes are the <b>C major scale</b>: C D E F G A B C.</p>',
+                  sk: '<p>Každý krok nahor v osnove, z línie do najbližšej medzery alebo z medzery na najbližšiu líniu, je ďalší vyšší tón. Týchto osem nôt tvorí <b>stupnicu C dur</b>: C D E F G A H C.</p>',
+                },
                 setup(root, api) {
                   root.querySelector('.scale-btn').addEventListener('click', () => {
-                    if (!api.tone(SCALE.map((n) => [NOTE[n], 0.32]))) { api.toast('Audio isn’t available on this device'); return; }
+                    if (!api.tone(SCALE.map((n) => [NOTE[n], 0.32]))) { api.toast(api.lang === 'sk' ? 'Zvuk nie je na tomto zariadení dostupný' : 'Audio isn’t available on this device'); return; }
                     const g = root.querySelector('.scale-notes');
                     g.innerHTML = SCALE.map((n, i) => note(102 + i * 27, n, { cls: 'a-reveal', delay: i * 0.37 })).join('');
                   });
                 },
               },
               {
-                title: 'Recap',
-                points: [
-                  'The treble staff has five lines: <b>E G B D F</b> from the bottom.',
-                  'The spaces spell <b>F A C E</b>.',
-                  'Higher on the staff means a <b>higher</b> sound.',
-                  'Middle C sits on a ledger line below the staff.',
-                ],
+                title: { en: 'Recap', sk: 'Zhrnutie' },
+                points: {
+                  en: [
+                    'The treble staff has five lines: <b>E G B D F</b> from the bottom.',
+                    'The spaces spell <b>F A C E</b>.',
+                    'Higher on the staff means a <b>higher</b> sound.',
+                    'Middle C sits on a ledger line below the staff.',
+                  ],
+                  sk: [
+                    'V husľovom kľúči má osnova päť línií: odspodu <b>E G H D F</b>.',
+                    'V medzerách sú odspodu <b>F A C E</b>.',
+                    'Vyššie v osnove znamená <b>vyšší</b> tón.',
+                    'Jednočiarkované C (c1) leží na pomocnej línii pod osnovou.',
+                  ],
+                },
               },
             ],
             quiz: [
-              { type: 'choice', prompt: 'Listen. Is the second note higher or lower than the first?', tones: [[NOTE.E4, 0.6], [0, 0.15], [NOTE.C5, 0.6]],
-                options: ['Higher', 'Lower', 'The same'], answer: 'Higher',
-                explain: 'It jumped up from E to a <b>higher</b> C.', hint: 'play it again and hum along.' },
-              { type: 'choice', prompt: 'The treble staff lines from the bottom are E, G, B, D, …',
+              { type: 'choice', prompt: { en: 'Listen. Is the second note higher or lower than the first?', sk: 'Počúvaj. Je druhý tón vyšší, alebo nižší ako prvý?' }, tones: [[NOTE.E4, 0.6], [0, 0.15], [NOTE.C5, 0.6]],
+                options: { en: ['Higher', 'Lower', 'The same'], sk: ['Vyšší', 'Nižší', 'Rovnaký'] }, answer: { en: 'Higher', sk: 'Vyšší' },
+                explain: { en: 'It jumped up from E to a <b>higher</b> C.', sk: 'Skočil z E nahor na <b>vyššie</b> C.' },
+                hint: { en: 'play it again and hum along.', sk: 'pusti si to znova a pobruč si.' } },
+              { type: 'choice', prompt: { en: 'The treble staff lines from the bottom are E, G, B, D, …', sk: 'Línie v husľovom kľúči sú odspodu E, G, H, D, …' },
                 options: ['F', 'A', 'C', 'E'], answer: 'F',
-                explain: '<b>E</b>very <b>G</b>ood <b>B</b>oy <b>D</b>oes <b>F</b>ine.', hint: 'Every Good Boy Does…' },
-              { type: 'choice', prompt: 'Which note is this?', art: QUIZ_NOTE,
-                options: ['B', 'G', 'D', 'C'], answer: 'B',
-                explain: 'It’s on the middle line: E, G, <b>B</b>.', hint: 'count the lines up from the bottom: E, G, …' },
-              { type: 'tf', prompt: 'True or false?', statement: 'Notes written higher on the staff sound higher.', answer: true,
-                explain: '<b>True.</b> Up the staff means up in pitch.', hint: 'remember the scale climbing.' },
+                explain: { en: '<b>E</b>very <b>G</b>ood <b>B</b>oy <b>D</b>oes <b>F</b>ine.', sk: 'Odspodu: E, G, H, D, <b>F</b>.' },
+                hint: { en: 'Every Good Boy Does…', sk: 'línie idú ob jeden tón: E, G, H, D, …' } },
+              { type: 'choice', prompt: { en: 'Which note is this?', sk: 'Ktorá je to nota?' }, art: { en: quizNote('en'), sk: quizNote('sk') },
+                options: { en: ['B', 'G', 'D', 'C'], sk: ['H', 'G', 'D', 'C'] }, answer: { en: 'B', sk: 'H' },
+                explain: { en: 'It’s on the middle line: E, G, <b>B</b>.', sk: 'Leží na strednej línii: E, G, <b>H</b>.' },
+                hint: { en: 'count the lines up from the bottom: E, G, …', sk: 'počítaj línie odspodu: E, G, …' } },
+              { type: 'tf', prompt: { en: 'True or false?', sk: 'Pravda, alebo nepravda?' },
+                statement: { en: 'Notes written higher on the staff sound higher.', sk: 'Noty zapísané vyššie v osnove znejú vyššie.' }, answer: true,
+                explain: { en: '<b>True.</b> Up the staff means up in pitch.', sk: '<b>Pravda.</b> Vyššie v osnove znamená vyšší tón.' },
+                hint: { en: 'remember the scale climbing.', sk: 'spomeň si, ako stúpala stupnica.' } },
             ],
           },
         ],
-        soon: ['Rhythm and beats', 'Sharps and flats'],
+        soon: { en: ['Rhythm and beats', 'Sharps and flats'], sk: ['Rytmus a doby', 'Krížiky a béčka'] },
       },
     ],
-    soonUnits: ['Chords'],
+    soonUnits: { en: ['Chords'], sk: ['Akordy'] },
   });
 })();

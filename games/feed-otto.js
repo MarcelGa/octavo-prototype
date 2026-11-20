@@ -2,10 +2,12 @@
 
 /* Feed Otto (kids, any subject). Otto holds up a word and a meaning. Do they go together?
    Tap "Yum!" for a match or "Yuck!" for a mix-up. A miss just shows the right pair. */
+(() => {
+const { t } = window.Octavo;
 window.Octavo.addGame({
   id: 'feed-otto',
-  title: 'Feed Otto',
-  blurb: 'Does it match? Feed Otto the right snacks.',
+  title: t('g.feed.title'),
+  blurb: t('g.feed.blurb'),
   audiences: ['kids'],
   kinds: ['any', 'language'],
   styles: ['playful'],
@@ -38,10 +40,10 @@ window.Octavo.addGame({
             <span aria-hidden="true">=</span>
             <span>${esc(round.shown)}</span>
           </div>
-          <p class="g-ask">Do they go together?</p>
+          <p class="g-ask">${t('g.feed.ask')}</p>
           <div class="g-yesno">
-            <button type="button" class="g-yes" data-g="yes">Yum! 😋</button>
-            <button type="button" class="g-no" data-g="no">Yuck! 🙅</button>
+            <button type="button" class="g-yes" data-g="yes">${t('g.feed.yes')}</button>
+            <button type="button" class="g-no" data-g="no">${t('g.feed.no')}</button>
           </div>
           <p class="g-note" aria-live="polite"></p>
         </div>`;
@@ -59,11 +61,11 @@ window.Octavo.addGame({
         right += 1;
         otto.classList.add('happy');
         ctx.sfx('correct');
-        root.querySelector('.g-note').textContent = round.real ? 'Yum! That’s right!' : 'Good catch! That was a mix-up.';
+        root.querySelector('.g-note').textContent = round.real ? t('g.feed.right') : t('g.feed.caught');
       } else {
         otto.classList.add('think');
         ctx.sfx('tap');
-        root.querySelector('.g-note').innerHTML = `Hmm… <b>${esc(round.p.a)}</b> means <b>${esc(round.p.b)}</b>.`;
+        root.querySelector('.g-note').innerHTML = t('g.feed.means', { a: esc(round.p.a), b: esc(round.p.b) });
       }
       ctx.later(() => {
         r += 1;
@@ -75,3 +77,4 @@ window.Octavo.addGame({
     draw();
   },
 });
+})();

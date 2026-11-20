@@ -2,10 +2,12 @@
 
 /* Speed Match (adults). Match terms to meanings against a 60-second clock.
    Each cleared board deals a new one; a streak of matches adds bonus points. */
+(() => {
+const { t, tn } = window.Octavo;
 window.Octavo.addGame({
   id: 'speed-match',
-  title: 'Speed Match',
-  blurb: 'Match every term to its meaning before the clock runs out.',
+  title: t('g.speed.title'),
+  blurb: t('g.speed.blurb'),
   audiences: ['adult'],
   kinds: ['language', 'science', 'logic'],
   styles: ['competitive'],
@@ -23,7 +25,7 @@ window.Octavo.addGame({
     let board = [];
     let solved = 0;
 
-    const hud = () => ctx.hud(`<span class="g-timer${left <= 10 ? ' low' : ''}">${left}s</span><span class="g-count">${points} pts</span>`);
+    const hud = () => ctx.hud(`<span class="g-timer${left <= 10 ? ' low' : ''}">${left}s</span><span class="g-count">${t('pts', { n: points })}</span>`);
 
     function deal() {
       board = sample(pairs, perBoard);
@@ -32,7 +34,7 @@ window.Octavo.addGame({
       const lefts = shuffle(board.map((p, i) => ({ i, t: p.a, lang: p.lang })));
       const rights = shuffle(board.map((p, i) => ({ i, t: p.b })));
       root.innerHTML = `
-        <p class="g-ask">Tap a term, then its meaning.</p>
+        <p class="g-ask">${t('g.speed.ask')}</p>
         <div class="g-columns">
           <div class="g-col">${lefts.map((x) => `<button type="button" class="g-tile term" data-g="term" data-i="${x.i}"${x.lang ? ` lang="${esc(x.lang.slice(0, 2))}"` : ''}>${esc(x.t)}</button>`).join('')}</div>
           <div class="g-col">${rights.map((x) => `<button type="button" class="g-tile" data-g="meaning" data-i="${x.i}">${esc(x.t)}</button>`).join('')}</div>
@@ -75,7 +77,7 @@ window.Octavo.addGame({
       if (left <= 0) {
         clearInterval(tick);
         root.querySelectorAll('.g-tile').forEach((b) => { b.disabled = true; });
-        ctx.later(() => ctx.finish({ score: matches, max: 12, points, label: `${matches} matches` }), 500);
+        ctx.later(() => ctx.finish({ score: matches, max: 12, points, label: tn('g.speed.matches', matches) }), 500);
       }
     }, 1000);
 
@@ -84,3 +86,4 @@ window.Octavo.addGame({
     return () => clearInterval(tick);
   },
 });
+})();

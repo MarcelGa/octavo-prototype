@@ -191,7 +191,9 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--violet); outlin
 }
 .node:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
 .node b { font-family: var(--font-head); font-weight: 600; font-size: 20px; line-height: 1; }
-.node span { font-size: 10px; font-weight: 800; color: var(--muted); }
+/* Longer subject names (Komunikácia, Hudobná výchova) shrink to stay inside the circle. */
+.node span { max-width: 88%; font-size: 10px; font-weight: 800; color: var(--muted); text-align: center; line-height: 1.1; overflow-wrap: anywhere; }
+.node span.long { font-size: 8.5px; letter-spacing: -0.02em; }
 
 .card { background: #fff; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .card-head { display: flex; align-items: center; gap: 8px; font-family: var(--font-head); font-weight: 600; font-size: 19px; }
@@ -648,6 +650,14 @@ button.link-btn, .link-inline { border: 0; background: none; font-family: inheri
 .cc-badge { flex: none; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; background: var(--violet-tint); color: var(--violet-dark); }
 .cc-badge.done { background: var(--green-tint); color: var(--green-dark); }
 .cc-badge.started { background: #FEF3DD; color: #7A5000; }
+/* The language a course is taught in, when it differs from the UI language (i18n.js). */
+.lang-badge { flex: none; display: inline-block; vertical-align: middle; padding: 2px 7px; border-radius: 6px; border: 1.5px solid currentColor; font-family: Nunito, system-ui, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; line-height: 1.3; color: var(--muted); }
+.cc-top .lang-badge { margin-left: auto; }
+.course-hero h1 .lang-badge { position: relative; top: -3px; }
+.lang-card .card-head { font-size: 16px; }
+.lang-alt { font-weight: 700; color: var(--muted); }
+.lang-pick { flex-wrap: wrap; margin-top: 10px; }
+.lang-pick .goal-btn { padding: 0 16px; }
 .cc-lec { font-size: 13px; color: var(--muted); }
 .cc-rating { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--muted); }
 .cc-rating b { color: #8A5A00; font-size: 14px; }

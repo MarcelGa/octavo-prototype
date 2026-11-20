@@ -12,22 +12,31 @@
      #certificate/<id>  a finished course's certificate
      #game/<id>[/<g>]   the bonus game for a lesson (games/*.js), optionally a specific one */
 
-const { courses, lecturers, community, speak, tone, sfx, NOTE, rankGames, mountGame, stopGame } = window.Octavo;
+const { courses, lecturers, community, games, speak, tone, sfx, NOTE, rankGames, mountGame, stopGame, t, tn, loc, localize, fmtNum, fmtAgo, fmtDate } = window.Octavo;
+const LANG = window.Octavo.lang;
 
 // ---------------------------------------------------------------- subjects
 
+// `name` is the stable key (courses, saved arms); `label` and `topic` are what the learner sees.
 const SUBJECTS = [
-  { name: 'Languages', topic: 'Spanish',   level: 7, kind: 'language', color: '#E8613F', tint: '#FFE9E2', text: '#9A3A1F', icon: 'M4 5h16v10H9l-5 4z' },
-  { name: 'Medicine',  topic: 'Nervous system', level: 3, kind: 'science', color: '#E5484D', tint: '#FDE7E8', text: '#9B2226', icon: 'M3 12h4l2-5 4 10 2-5h6' },
-  { name: 'Communication', topic: 'Soft skills', level: 1, kind: 'skills', color: '#0090C1', tint: '#E1F3FA', text: '#00668A', icon: 'M9 11a3 3 0 1 0 0-6a3 3 0 0 0 0 6M3 20c.7-3.5 3-5 6-5s5.3 1.5 6 5M16 8a4 4 0 0 1 0 6M19 5a8 8 0 0 1 0 12' },
-  { name: 'Physics',   topic: 'Motion',    level: 4, kind: 'science', color: '#8E4EC6', tint: '#F1E8FA', text: '#6A2E9E', icon: 'M12 9a3 3 0 1 0 0.01 0M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8' },
-  { name: 'Circuits',  topic: "Ohm's law", level: 5, kind: 'science', color: '#D18A00', tint: '#FEF3DD', text: '#7A5000', icon: 'M13 3L5 14h6l-1 7 8-11h-6z' },
-  { name: 'Code',      topic: 'Python',    level: 6, kind: 'logic', color: '#12A594', tint: '#DDF5F1', text: '#0B6B60', icon: 'M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14' },
-  { name: 'Chemistry', topic: 'Atoms',     level: 2, kind: 'science', color: '#30A46C', tint: '#E0F4E8', text: '#1C6B45', icon: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3' },
-  { name: 'Music',     topic: 'Notes',     level: 1, kind: 'arts', color: '#D6409F', tint: '#FBE6F3', text: '#962A6E', icon: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 1 1 6 0M20 16a3 3 0 1 1-6 0a3 3 0 1 1 6 0' },
-  { name: 'Math',      topic: 'Fractions', level: 9, kind: 'science', color: '#3E63DD', tint: '#E6ECFC', text: '#2A44A8', icon: 'M17 5H7l6 7-6 7h10' },
-  { name: 'Italian',   topic: 'First words', level: 1, kind: 'language', color: '#6E8B1E', tint: '#EEF4DC', text: '#4A5E12', icon: 'M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3v3M12 3v3' },
+  { name: 'Languages', label: { en: 'Languages', sk: 'Jazyky' }, topic: { en: 'Spanish', sk: 'Španielčina' }, level: 7, kind: 'language', color: '#E8613F', tint: '#FFE9E2', text: '#9A3A1F', icon: 'M4 5h16v10H9l-5 4z' },
+  { name: 'Medicine', label: { en: 'Medicine', sk: 'Medicína' }, topic: { en: 'Nervous system', sk: 'Nervová sústava' }, level: 3, kind: 'science', color: '#E5484D', tint: '#FDE7E8', text: '#9B2226', icon: 'M3 12h4l2-5 4 10 2-5h6' },
+  { name: 'Communication', label: { en: 'Communication', sk: 'Komunikácia' }, topic: { en: 'Soft skills', sk: 'Mäkké zručnosti' }, level: 1, kind: 'skills', color: '#0090C1', tint: '#E1F3FA', text: '#00668A', icon: 'M9 11a3 3 0 1 0 0-6a3 3 0 0 0 0 6M3 20c.7-3.5 3-5 6-5s5.3 1.5 6 5M16 8a4 4 0 0 1 0 6M19 5a8 8 0 0 1 0 12' },
+  { name: 'Physics', label: { en: 'Physics', sk: 'Fyzika' }, topic: { en: 'Motion', sk: 'Pohyb' }, level: 4, kind: 'science', color: '#8E4EC6', tint: '#F1E8FA', text: '#6A2E9E', icon: 'M12 9a3 3 0 1 0 0.01 0M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8' },
+  { name: 'Circuits', label: { en: 'Circuits', sk: 'Obvody' }, topic: { en: "Ohm's law", sk: 'Ohmov zákon' }, level: 5, kind: 'science', color: '#D18A00', tint: '#FEF3DD', text: '#7A5000', icon: 'M13 3L5 14h6l-1 7 8-11h-6z' },
+  { name: 'Code', label: { en: 'Code', sk: 'Kód' }, topic: 'Python', level: 6, kind: 'logic', color: '#12A594', tint: '#DDF5F1', text: '#0B6B60', icon: 'M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14' },
+  { name: 'Chemistry', label: { en: 'Chemistry', sk: 'Chémia' }, topic: { en: 'Atoms', sk: 'Atómy' }, level: 2, kind: 'science', color: '#30A46C', tint: '#E0F4E8', text: '#1C6B45', icon: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3' },
+  { name: 'Music', label: { en: 'Music', sk: 'Hudba' }, topic: { en: 'Notes', sk: 'Noty' }, level: 1, kind: 'arts', color: '#D6409F', tint: '#FBE6F3', text: '#962A6E', icon: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 1 1 6 0M20 16a3 3 0 1 1-6 0a3 3 0 1 1 6 0' },
+  { name: 'Math', label: { en: 'Math', sk: 'Matematika' }, topic: { en: 'Fractions', sk: 'Zlomky' }, level: 9, kind: 'science', color: '#3E63DD', tint: '#E6ECFC', text: '#2A44A8', icon: 'M17 5H7l6 7-6 7h10' },
+  { name: 'Italian', label: { en: 'Italian', sk: 'Taliančina' }, topic: { en: 'First words', sk: 'Prvé slová' }, level: 1, kind: 'language', color: '#6E8B1E', tint: '#EEF4DC', text: '#4A5E12', icon: 'M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3v3M12 3v3' },
+  // 2nd grade of Slovak primary school (ZŠ), following the school curriculum; each subject is a series of courses.
+  // Their subject names are Slovak in both languages: they are the Slovak school subjects.
+  { name: 'Matematika', topic: { en: 'Year 2', sk: '2. ročník' }, level: 1, kind: 'science', color: '#A43CB4', tint: '#F6E6F8', text: '#74237F', icon: 'M7 4v6M4 7h6M14 7h6M5 15l4 4M9 15l-4 4M14 15h6M14 19h6' },
+  { name: 'Slovenčina', topic: { en: 'Year 2', sk: '2. ročník' }, level: 1, kind: 'language', color: '#4C6A92', tint: '#E6EDF5', text: '#2F4A6E', icon: 'M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3zM21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z' },
+  { name: 'Prvouka', topic: { en: 'Year 2', sk: '2. ročník' }, level: 1, kind: 'science', color: '#8B5E34', tint: '#F4EBE1', text: '#5E3D1E', icon: 'M12 21v-9M12 12c0-4 3-7 8-7c0 5-3 7-8 7M12 14c0-3-2.5-5-7-5c0 4 2.5 5 7 5' },
+  { name: 'Hudobná výchova', topic: { en: 'Year 2', sk: '2. ročník' }, level: 1, kind: 'arts', color: '#9E2B4F', tint: '#F8E4EA', text: '#741C38', icon: 'M4 8c0-1.7 3.6-3 8-3s8 1.3 8 3s-3.6 3-8 3s-8-1.3-8-3M4 8v8c0 1.7 3.6 3 8 3s8-1.3 8-3V8M7 2l3 4M17 2l-3 4' },
 ];
+for (const s of SUBJECTS) { s.label = loc(s.label) || s.name; s.topic = loc(s.topic); }
 const subject = (name) => SUBJECTS.find((s) => s.name === name);
 
 // Otto has eight arms but there are more subjects: the learner picks which eight
@@ -42,7 +51,12 @@ function validArms(list) {
 const armSubjects = () => state.arms.map(subject);
 const restingSubjects = () => SUBJECTS.filter((s) => !state.arms.includes(s.name));
 
-// Index every lesson and remember which course it belongs to.
+// Pick each course's text in the UI language (i18n.js), then index every lesson and
+// remember which course it belongs to. A course says which language it was written
+// in with `lang` (default 'en'); missing translations fall back to that language.
+// c.langs: every language the course can be shown in (for the language chip).
+for (const c of courses) { c.langs = window.Octavo.langsOf(c); localize(c, c.lang || 'en'); }
+localize(lecturers);
 const ALL_LESSONS = [];
 for (const c of courses) {
   c.subjectInfo = subject(c.subject);
@@ -50,11 +64,15 @@ for (const c of courses) {
 }
 const lessonById = (id) => ALL_LESSONS.find((l) => l.id === id);
 const courseById = (id) => courses.find((c) => c.id === id);
-const courseFor = (name) => courses.find((c) => c.subject === name);
+// A subject can have a series of courses (in index.html order); its arm opens the first one not finished yet.
+const coursesFor = (name) => courses.filter((c) => c.subject === name);
 const courseLessons = (c) => c.units.flatMap((u) => u.lessons);
 const nextLessonIn = (c) => courseLessons(c).find((l) => !state.completed[l.id]) || null;
-const nextAfter = (l) => { const ls = courseLessons(l.course); return ls[ls.indexOf(l) + 1] || null; };
+const courseFor = (name) => { const cs = coursesFor(name); return cs.find((c) => nextLessonIn(c)) || cs[0]; };
+const subjectLessons = (name) => coursesFor(name).flatMap(courseLessons);
+const nextAfter = (l) => { const ls = subjectLessons(l.course.subject); return ls[ls.indexOf(l) + 1] || null; };
 const courseDone = (c) => courseLessons(c).filter((l) => state.completed[l.id]).length;
+const subjectDone = (name) => subjectLessons(name).filter((l) => state.completed[l.id]).length;
 
 // ---------------------------------------------------------------- bonus games
 // The engine (games/engine.js) picks from the course's audience, the subject's kind
@@ -73,7 +91,7 @@ const inkFor = (l, result) => (isKids(l) ? 10 : Math.round(5 + 15 * Math.min(1, 
 // ---------------------------------------------------------------- practice quiz ("Today's mix")
 
 const CIRCUIT_FIGURE = `
-<svg viewBox="0 0 300 140" role="img" aria-label="Circuit: a 9 volt battery in a loop with a 3 ohm resistor; the current I is unknown">
+<svg viewBox="0 0 300 140" role="img" aria-label="${loc({ en: 'Circuit: a 9 volt battery in a loop with a 3 ohm resistor; the current I is unknown', sk: 'Obvod: 9-voltová batéria v slučke s 3-ohmovým rezistorom; prúd I nepoznáme' })}">
   <g fill="none" stroke="#1E1A3C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
     <path d="M40 62 V30 H120"/><path d="M120 30 l5 -10 l10 20 l10 -20 l10 20 l10 -20 l10 20 l5 -10"/>
     <path d="M180 30 H260 V110 H40 V78"/><path d="M26 62 H54"/>
@@ -85,19 +103,22 @@ const CIRCUIT_FIGURE = `
   <text x="200" y="76" font-family="Nunito, sans-serif" font-weight="800" font-size="16" fill="#6C4CF1">I = ?</text>
 </svg>`;
 
-const PRACTICE = [
-  { subject: 'Circuits', type: 'choice', prompt: 'A 9 V battery is connected to a 3 Ω resistor. How much current flows?', art: CIRCUIT_FIGURE,
-    options: ['3 A', '27 A', '0.33 A', '6 A'], answer: '3 A',
-    explain: "Ohm's law: I = V ÷ R = 9 V ÷ 3 Ω = <strong>3 A</strong>.", hint: 'current is voltage <em>divided</em> by resistance.' },
-  { subject: 'Languages', type: 'choice', prompt: 'How do you say “the octopus” in Spanish?',
+const PRACTICE = localize([
+  { subject: 'Circuits', type: 'choice', prompt: { en: 'A 9 V battery is connected to a 3 Ω resistor. How much current flows?', sk: '9 V batéria je pripojená k rezistoru 3 Ω. Aký prúd tečie obvodom?' }, art: CIRCUIT_FIGURE,
+    options: { en: ['3 A', '27 A', '0.33 A', '6 A'], sk: ['3 A', '27 A', '0,33 A', '6 A'] }, answer: '3 A',
+    explain: { en: "Ohm's law: I = V ÷ R = 9 V ÷ 3 Ω = <strong>3 A</strong>.", sk: 'Ohmov zákon: I = U ÷ R = 9 V ÷ 3 Ω = <strong>3 A</strong>.' },
+    hint: { en: 'current is voltage <em>divided</em> by resistance.', sk: 'prúd je napätie <em>delené</em> odporom.' } },
+  { subject: 'Languages', type: 'choice', prompt: { en: 'How do you say “the octopus” in Spanish?', sk: 'Ako sa po španielsky povie „chobotnica“?' },
     options: ['el pulpo', 'la pulpa', 'el polvo', 'el pueblo'], answer: 'el pulpo',
-    explain: '<strong>El pulpo</strong>. Careful: <em>la pulpa</em> is pulp, <em>el polvo</em> is dust and <em>el pueblo</em> is a village.', hint: 'it’s a masculine noun that starts with “pul…”.' },
-  { subject: 'Medicine', type: 'choice', prompt: 'How many chambers does the human heart have?',
+    explain: { en: '<strong>El pulpo</strong>. Careful: <em>la pulpa</em> is pulp, <em>el polvo</em> is dust and <em>el pueblo</em> is a village.', sk: '<strong>El pulpo</strong>. Pozor: <em>la pulpa</em> je dužina, <em>el polvo</em> je prach a <em>el pueblo</em> je dedina.' },
+    hint: { en: 'it’s a masculine noun that starts with “pul…”.', sk: 'je to podstatné meno mužského rodu, začína sa na „pul…“.' } },
+  { subject: 'Medicine', type: 'choice', prompt: { en: 'How many chambers does the human heart have?', sk: 'Koľko dutín má ľudské srdce?' },
     options: ['2', '3', '4', '6'], answer: '4',
-    explain: '<strong>4</strong>: two atria on top and two ventricles below. (Otto has three whole hearts!)', hint: 'think two on top, two below.' },
-];
+    explain: { en: '<strong>4</strong>: two atria on top and two ventricles below. (Otto has three whole hearts!)', sk: '<strong>4</strong>: dve predsiene hore a dve komory dole. (Otto má až tri srdcia!)' },
+    hint: { en: 'think two on top, two below.', sk: 'pomysli na dve hore a dve dole.' } },
+]);
 
-const PRAISE = ['Brilliant!', 'Nailed it!', 'Spot on!', 'Tentacular!', 'Big brain!'];
+const PRAISE = t('quiz.praise');
 
 // ---------------------------------------------------------------- art and icons
 
@@ -119,7 +140,7 @@ const OTTO_HEAD = `
   <path d="M92 44 v14 q28 12 56 0 v-14 z" fill="#1E1A3C"/><polygon points="120,14 176,34 120,54 64,34" fill="#1E1A3C"/>
   <path d="M120 34 L168 40 L170 62" fill="none" stroke="#FF7A59" stroke-width="3" stroke-linecap="round"/><circle cx="170" cy="66" r="5" fill="#FF7A59"/>`;
 const ottoFull = (size) => `<svg width="${size}" height="${size}" viewBox="20 10 200 220" aria-hidden="true">${OTTO_ARMS}${OTTO_HEAD}</svg>`;
-const ottoFace = () => `<svg viewBox="44 10 152 160" role="img" aria-label="Otto, the central brain">${OTTO_HEAD}</svg>`;
+const ottoFace = () => `<svg viewBox="44 10 152 160" role="img" aria-label="${t('otto.aria')}">${OTTO_HEAD}</svg>`;
 
 const ICON = {
   home: 'M3 11l9-7 9 7v9H3z',
@@ -158,7 +179,12 @@ const FLAME = (s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" a
 const DROP = (s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z" fill="#6C4CF1"/></svg>`;
 const HEART = (s = 22) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" fill="#FF7A59"/></svg>`;
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+// A small chip with the language a course is taught in, when it has no version in the UI language.
+const langBadge = (c) => {
+  if (c.langs.includes(LANG)) return '';
+  const shown = c.lang || 'en';
+  return `<span class="lang-badge" title="${esc(t('lang.badge', { lang: window.Octavo.LOCALE_NAMES[shown] || shown }))}">${esc(shown.toUpperCase())}</span>`;
+};
 
 // ---------------------------------------------------------------- state
 
@@ -292,8 +318,8 @@ function startQuestion(run) {
   run.shuffle = q && q.type === 'order' ? shuffled(q.items.length) : null;
 }
 
-const answerLabel = (q) => (q.type === 'tf' ? (q.answer ? 'True' : 'False') : q.answer);
-const optionsFor = (q) => (q.type === 'tf' ? ['True', 'False'] : q.options);
+const answerLabel = (q) => (q.type === 'tf' ? (q.answer ? t('quiz.true') : t('quiz.false')) : q.answer);
+const optionsFor = (q) => (q.type === 'tf' ? [t('quiz.true'), t('quiz.false')] : q.options);
 function isCorrect(q, run) {
   if (q.type === 'order') return run.order.length === q.items.length && run.order.every((v, i) => v === i);
   return run.picked === answerLabel(q);
@@ -303,28 +329,28 @@ function isCorrect(q, run) {
 
 function tabbar(active) {
   const tabs = [
-    { id: 'home', label: 'Learn', href: '#home', icon: ICON.home },
-    { id: 'courses', label: 'Courses', href: '#courses', icon: ICON.grid },
-    { id: 'practice', label: 'Practice', href: '#practice', icon: ICON.target },
-    { id: 'leagues', label: 'Leagues', icon: ICON.trophy },
-    { id: 'progress', label: 'Profile', href: '#progress', icon: ICON.user },
+    { id: 'home', label: t('tab.learn'), href: '#home', icon: ICON.home },
+    { id: 'courses', label: t('tab.courses'), href: '#courses', icon: ICON.grid },
+    { id: 'practice', label: t('tab.practice'), href: '#practice', icon: ICON.target },
+    { id: 'leagues', label: t('tab.leagues'), icon: ICON.trophy },
+    { id: 'progress', label: t('tab.profile'), href: '#progress', icon: ICON.user },
   ];
-  return `<nav class="tabbar" aria-label="Main">${tabs.map((t) => t.href
-    ? `<a class="tab${t.id === active ? ' active' : ''}" href="${t.href}"${t.id === active ? ' aria-current="page"' : ''}>${stroke(t.icon)}<span>${t.label}</span></a>`
-    : `<button type="button" class="tab" data-action="toast" data-msg="${t.label} are coming soon">${stroke(t.icon)}<span>${t.label}</span></button>`
+  return `<nav class="tabbar" aria-label="${t('tab.nav')}">${tabs.map((x) => x.href
+    ? `<a class="tab${x.id === active ? ' active' : ''}" href="${x.href}"${x.id === active ? ' aria-current="page"' : ''}>${stroke(x.icon)}<span>${x.label}</span></a>`
+    : `<button type="button" class="tab" data-action="toast" data-msg="${esc(t('tab.soon', { label: x.label }))}">${stroke(x.icon)}<span>${x.label}</span></button>`
   ).join('')}</nav>`;
 }
 
-const lessonMeta = (l) => `${plural(l.slides.length, 'slide')} · ${plural(l.quiz.length, 'question')} · ~${l.minutes} min`;
+const lessonMeta = (l) => `${tn('n.slide', l.slides.length)} · ${tn('n.question', l.quiz.length)} · ${t('aboutMin', { n: l.minutes })}`;
 
 // ---------------------------------------------------------------- home
 
 function mixText() {
   const n = missedKeys().length;
-  if (n) return `<b>Review my mistakes</b><span>${plural(n, 'question')} to fix, mixed with ones from your arms</span>`;
+  if (n) return `<b>${t('home.mixReview')}</b><span>${tn('home.mixFix', n)}</span>`;
   const pool = ALL_LESSONS.filter((l) => inArms(l) && state.completed[l.id]).reduce((a, l) => a + l.quiz.length, 0);
-  if (pool) return `<b>Today's mix</b><span>${plural(Math.min(pool, PRACTICE_SIZE), 'quick question')} from lessons you've done</span>`;
-  return "<b>Today's mix</b><span>3 quick questions from 3 different arms</span>";
+  if (pool) return `<b>${t('home.mix')}</b><span>${tn('home.mixDone', Math.min(pool, PRACTICE_SIZE))}</span>`;
+  return `<b>${t('home.mix')}</b><span>${t('home.mixStart')}</span>`;
 }
 
 function homeScreen() {
@@ -342,19 +368,19 @@ function homeScreen() {
 
   const continueCard = next ? `
   <section class="continue" aria-labelledby="next-title">
-    <span class="eyebrow">Continue · ${course.title}</span>
+    <span class="eyebrow">${t('home.continue', { title: course.title })}</span>
     <h2 id="next-title">${next.title}</h2>
     <span class="continue-meta">${stroke(ICON.slides, 16, '#E6E0FF')} ${lessonMeta(next)}</span>
     <div class="bar-row">
       <div class="bar"><div style="width: ${pct}%"></div></div>
-      <span>${courseDone(course)}/${courseLessons(course).length} lessons</span>
+      <span>${t('lessonsFrac', { done: courseDone(course), total: courseLessons(course).length })}</span>
     </div>
-    <a class="btn-light" href="#lesson/${next.id}">Start lesson</a>
+    <a class="btn-light" href="#lesson/${next.id}">${t('home.startLesson')}</a>
   </section>` : `
   <section class="continue">
-    <span class="eyebrow">Every lesson done</span>
-    <h2>All eight arms trained!</h2>
-    <a class="btn-light" href="#progress">See my nine brains</a>
+    <span class="eyebrow">${t('home.allDone')}</span>
+    <h2>${t('home.allTrained')}</h2>
+    <a class="btn-light" href="#progress">${t('home.seeBrains')}</a>
   </section>`;
 
   return `
@@ -362,14 +388,14 @@ function homeScreen() {
   <header class="topbar">
     <div class="wordmark" aria-label="Octavo">octav<span>o</span></div>
     <div class="pills">
-      <span class="pill">${FLAME()}${streakNow()}<span class="sr"> day streak</span></span>
-      <span class="pill">${DROP()}${state.ink}<span class="sr"> ink drops</span></span>
+      <span class="pill">${FLAME()}${streakNow()}<span class="sr">${t('home.streakSr')}</span></span>
+      <span class="pill">${DROP()}${state.ink}<span class="sr">${t('home.inkSr')}</span></span>
     </div>
   </header>
 
   <div class="greet">
     ${ottoFull(76)}
-    <p class="bubble">${doneToday() ?'Great work today! Fancy another round?' : 'Nine brains, zero limits. Which arm are we training today?'}</p>
+    <p class="bubble">${doneToday() ? t('home.bubbleDone') : t('home.bubble')}</p>
   </div>
 
   ${continueCard}
@@ -381,21 +407,21 @@ function homeScreen() {
   </a>
 
   <div class="section-row">
-    <h3 class="section-title">Your eight arms</h3>
-    <a class="link-btn" href="#arms">${stroke(ICON.swap, 16)} Swap arms</a>
+    <h3 class="section-title">${t('home.arms')}</h3>
+    <a class="link-btn" href="#arms">${stroke(ICON.swap, 16)} ${t('home.swap')}</a>
   </div>
   <div class="arms">
     ${armSubjects().map((sub) => {
       const c = courseFor(sub.name);
-      const total = courseLessons(c).length;
-      const done = courseDone(c);
+      const total = subjectLessons(sub.name).length;
+      const done = subjectDone(sub.name);
       return `
     <a class="arm" href="#course/${c.id}">
       <span class="arm-head">
         <span class="arm-icon" style="background: ${sub.tint}">${stroke(sub.icon, 18, sub.color)}</span>
         <span class="arm-text">
-          <span class="arm-name">${sub.name}</span>
-          <span class="arm-meta">${sub.topic} · ${done}/${total} lessons</span>
+          <span class="arm-name">${sub.label}</span>
+          <span class="arm-meta">${sub.topic} · ${t('lessonsFrac', { done, total })}</span>
         </span>
       </span>
       <span class="meter"><span style="width: ${Math.max(4, (done / total) * 100)}%; background: ${sub.color}"></span></span>
@@ -408,16 +434,16 @@ ${tabbar('home')}`;
 
 // ---------------------------------------------------------------- course (curriculum)
 
-const STYLE_LABEL = { playful: 'Playful', competitive: 'Loves a challenge', calm: 'Calm, unhurried', academic: 'Academic' };
+const STYLE_LABEL = Object.fromEntries(['playful', 'competitive', 'calm', 'academic'].map((k) => [k, t(`style.${k}`)]));
 const initials = (name) => name.replace(/^Dr\.?\s+/, '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2);
 
 function lecturerCard(lec, s) {
   if (!lec) return '';
   return `
-  <section class="lecturer-card" aria-label="Your lecturer">
+  <section class="lecturer-card" aria-label="${t('course.yourLecturer')}">
     <span class="avatar" style="background: ${s.color}" aria-hidden="true">${esc(initials(lec.name))}</span>
     <span class="lecturer-text">
-      <small>Your lecturer</small>
+      <small>${t('course.yourLecturer')}</small>
       <b>${esc(lec.name)}</b>
       <span>${esc(lec.bio)}</span>
       ${STYLE_LABEL[lec.style] ? `<span class="style-tag" style="background: ${s.tint}; color: ${s.text}">${STYLE_LABEL[lec.style]}</span>` : ''}
@@ -436,24 +462,24 @@ function courseScreen(c) {
   return `
 <main class="screen course">
   <header class="course-top">
-    <a class="icon-btn" href="${fromCatalog ? '#courses' : '#home'}" aria-label="${fromCatalog ? 'Back to all courses' : 'Back to home'}">${stroke(ICON.back, 24, 'currentColor', 2.6)}</a>
-    <span class="course-subject" style="color: ${s.text}">${s.name}</span>
+    <a class="icon-btn" href="${fromCatalog ? '#courses' : '#home'}" aria-label="${fromCatalog ? t('course.backCourses') : t('course.backHome')}">${stroke(ICON.back, 24, 'currentColor', 2.6)}</a>
+    <span class="course-subject" style="color: ${s.text}">${s.label}</span>
   </header>
 
   <section class="course-hero" style="background: ${s.tint}">
     <span class="course-icon">${stroke(s.icon, 28, s.color)}</span>
-    <h1>${c.title}</h1>
+    <h1>${c.title} ${langBadge(c)}</h1>
     <p>${c.blurb}</p>
-    <div class="hero-bar"><div class="meter"><span style="width: ${(done / total) * 100}%; background: ${s.color}"></span></div><span>${done}/${total} lessons</span></div>
-    ${courseComplete(c) ? `<a class="cert-link" href="#certificate/${c.id}" style="color: ${s.text}">${stroke(ICON.medal, 18, s.color)} View your certificate</a>` : ''}
+    <div class="hero-bar"><div class="meter"><span style="width: ${(done / total) * 100}%; background: ${s.color}"></span></div><span>${t('lessonsFrac', { done, total })}</span></div>
+    ${courseComplete(c) ? `<a class="cert-link" href="#certificate/${c.id}" style="color: ${s.text}">${stroke(ICON.medal, 18, s.color)} ${t('course.viewCert')}</a>` : ''}
   </section>
 
-  <section class="course-facts" aria-label="Rating and learners">
+  <section class="course-facts" aria-label="${t('course.facts')}">
     <button type="button" class="fact" data-action="course-tab" data-tab="reviews" data-jump="1">
-      <b>${rt.avg.toFixed(1)} ${starsHtml(rt.avg, 14)}</b><span>${compact(rt.count)} ratings</span>
+      <b>${fmtNum(rt.avg, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${starsHtml(rt.avg, 14)}</b><span>${compact(rt.count)} ${tn('n.ratings', rt.count)}</span>
     </button>
-    <div class="fact"><b>${compact(learnersFor(c))}</b><span>learners</span></div>
-    <div class="fact"><b>${courseMinutes(c)} min</b><span>${audienceLabel(c)}</span></div>
+    <div class="fact"><b>${compact(learnersFor(c))}</b><span>${tn('n.learners', learnersFor(c))}</span></div>
+    <div class="fact"><b>${t('minutes', { n: courseMinutes(c) })}</b><span>${audienceLabel(c)}</span></div>
   </section>
   ${enrollBlock(c)}
 
@@ -461,7 +487,7 @@ function courseScreen(c) {
 
   ${c.units.map((u, ui) => `
   <section class="unit">
-    <h2><span>Unit ${ui + 1}</span> ${u.title}</h2>
+    <h2><span>${t('course.unit', { n: ui + 1 })}</span> ${u.title}</h2>
     <ol class="path">
       ${u.lessons.map((l) => {
         n += 1;
@@ -474,26 +500,39 @@ function courseScreen(c) {
           <span class="path-dot" style="${isNext ? `background: ${s.color}; border-color: ${s.color}` : isDone ? '' : `border-color: ${s.color}`}">${isDone ? stroke(ICON.check, 18, '#fff', 3) : isNext ? stroke(ICON.play, 16, '#fff', 2) : n}</span>
           <span class="lesson-text">
             <b>${l.title}</b>
-            <small>${isDone ? `Quiz ${result.score}/${result.total} on first try · tap to review` : lessonMeta(l)}</small>
+            <small>${isDone ? t('course.doneRow', { score: result.score, total: result.total }) : lessonMeta(l)}</small>
           </span>
-          ${isNext ? '<span class="go">Start</span>' : ''}
+          ${isNext ? `<span class="go">${t('course.start')}</span>` : ''}
         </a>
       </li>`;
       }).join('')}
-      ${(u.soon || []).map((t) => `
-      <li><div class="lesson-row soon"><span class="path-dot">${stroke(ICON.lock, 16, '#6E6990')}</span><span class="lesson-text"><b>${t}</b><small>Coming soon</small></span></div></li>`).join('')}
+      ${(u.soon || []).map((title) => `
+      <li><div class="lesson-row soon"><span class="path-dot">${stroke(ICON.lock, 16, '#6E6990')}</span><span class="lesson-text"><b>${title}</b><small>${t('course.soon')}</small></span></div></li>`).join('')}
     </ol>
   </section>`).join('')}
 
-  ${(c.soonUnits || []).map((t, i) => `
+  ${(c.soonUnits || []).map((title, i) => `
   <section class="unit soon-unit">
-    <h2><span>Unit ${c.units.length + i + 1}</span> ${t}</h2>
-    <p class="soon-note">${stroke(ICON.lock, 16, '#6E6990')} Unlocks in the full app</p>
+    <h2><span>${t('course.unit', { n: c.units.length + i + 1 })}</span> ${title}</h2>
+    <p class="soon-note">${stroke(ICON.lock, 16, '#6E6990')} ${t('course.unlocks')}</p>
   </section>`).join('')}
+
+  ${seriesSection(c)}
 
   ${communitySection(c)}
 </main>
 ${tabbar(fromCatalog ? 'courses' : 'home')}`;
+}
+
+// The other courses in the same subject's series, in order.
+function seriesSection(c) {
+  const others = coursesFor(c.subject).filter((x) => x !== c);
+  if (!others.length) return '';
+  return `
+  <section class="unit">
+    <h2><span>${t('course.series')}</span> ${t('course.moreIn', { name: c.subjectInfo.label })}</h2>
+    <ul class="course-list">${others.map(catalogCard).join('')}</ul>
+  </section>`;
 }
 
 // ---------------------------------------------------------------- community: enrollment, ratings, reviews, discussion
@@ -506,8 +545,9 @@ const comm = (c) => community[c.id] || EMPTY_COMMUNITY;
 const isEnrolled = (c) => !!state.enrolled[c.id] || state.arms.includes(c.subject) || courseDone(c) > 0;
 const learnersFor = (c) => comm(c).enrolled + (isEnrolled(c) ? 1 : 0);
 const courseMinutes = (c) => courseLessons(c).reduce((a, l) => a + (l.minutes || 0), 0);
-const audienceLabel = (c) => (c.audience === 'kids' ? 'For kids' : 'For adults');
-const compact = (n) => (n >= 10000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : n.toLocaleString('en-US'));
+const audienceLabel = (c) => (c.audience === 'kids' ? t('course.forKids') : t('course.forAdults'));
+const compact = (n) => (n >= 10000 ? fmtNum(n, { notation: 'compact', maximumFractionDigits: 1 }) : fmtNum(n));
+const oneDecimal = (v) => fmtNum(v, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 // dist[0] is 5 stars … dist[4] is 1 star.
 function ratingFor(c) {
@@ -521,16 +561,10 @@ function ratingFor(c) {
 
 // Five stars, filled to `value` (partial stars allowed).
 const starsHtml = (value, size = 14) =>
-  `<span class="stars-rating" style="font-size: ${size}px" role="img" aria-label="${value.toFixed(1)} out of 5 stars"><span class="stars-on" style="width: ${Math.max(0, Math.min(100, (value / 5) * 100))}%">★★★★★</span>★★★★★</span>`;
+  `<span class="stars-rating" style="font-size: ${size}px" role="img" aria-label="${t('stars.aria', { v: oneDecimal(value) })}"><span class="stars-on" style="width: ${Math.max(0, Math.min(100, (value / 5) * 100))}%">★★★★★</span>★★★★★</span>`;
 
 const daysSince = (iso) => Math.max(0, Math.round((new Date(`${today()}T12:00:00`) - new Date(`${ymd(new Date(iso))}T12:00:00`)) / 864e5));
-function agoText(days) {
-  if (days <= 0) return 'today';
-  if (days === 1) return 'yesterday';
-  if (days < 7) return `${days} days ago`;
-  if (days < 30) return `${plural(Math.floor(days / 7), 'week')} ago`;
-  return `${plural(Math.floor(days / 30), 'month')} ago`;
-}
+const agoText = (days) => fmtAgo(days);
 
 const AVATAR_COLORS = ['#E8613F', '#0090C1', '#8E4EC6', '#D18A00', '#12A594', '#30A46C', '#D6409F', '#3E63DD', '#6E8B1E', '#E5484D'];
 const avatarColor = (name) => AVATAR_COLORS[[...name].reduce((a, ch) => a + ch.charCodeAt(0), 0) % AVATAR_COLORS.length];
@@ -543,12 +577,12 @@ function enrollBlock(c) {
   if (!isEnrolled(c)) {
     return `
   <section class="enroll-card">
-    <span><b>Join ${compact(learnersFor(c))} learners</b><small>Enroll to track this course and rate it.</small></span>
-    <button type="button" class="btn-primary small" data-action="enroll" style="background: ${s.color}">Enroll</button>
+    <span><b>${tn('comm.join', learnersFor(c), { n: compact(learnersFor(c)) })}</b><small>${t('comm.enrollWhy')}</small></span>
+    <button type="button" class="btn-primary small" data-action="enroll" style="background: ${s.color}">${t('comm.enroll')}</button>
   </section>`;
   }
-  const why = state.enrolled[c.id] ? `since ${longDate(state.enrolled[c.id])}` : state.arms.includes(c.subject) ? 'as one of your eight arms' : 'from your lessons';
-  return `<p class="enrolled-note">${stroke(ICON.check, 16, '#1F8A4C', 3)} <b>Enrolled</b> ${why}</p>`;
+  const why = state.enrolled[c.id] ? t('comm.since', { date: longDate(state.enrolled[c.id]) }) : state.arms.includes(c.subject) ? t('comm.asArm') : t('comm.fromLessons');
+  return `<p class="enrolled-note">${stroke(ICON.check, 16, '#1F8A4C', 3)} <b>${t('comm.enrolled')}</b> ${why}</p>`;
 }
 
 function communitySection(c) {
@@ -557,8 +591,8 @@ function communitySection(c) {
   const nReviews = allReviews(c).length;
   const tab = (id, label, n) => `<button type="button" role="tab" class="seg-tab${v.tab === id ? ' on' : ''}" data-action="course-tab" data-tab="${id}" aria-selected="${v.tab === id}">${label} <span>${n}</span></button>`;
   return `
-  <section class="community" id="community" aria-label="Reviews and discussion">
-    <div class="seg-tabs" role="tablist">${tab('reviews', 'Reviews', nReviews)}${tab('discussion', 'Discussion', nComments)}</div>
+  <section class="community" id="community" aria-label="${t('comm.aria')}">
+    <div class="seg-tabs" role="tablist">${tab('reviews', t('comm.reviews'), nReviews)}${tab('discussion', t('comm.discussion'), nComments)}</div>
     ${v.tab === 'discussion' ? discussionPanel(c) : reviewsPanel(c)}
   </section>`;
 }
@@ -568,14 +602,14 @@ function communitySection(c) {
 function allReviews(c) {
   const mine = state.myReviews[c.id];
   const list = comm(c).reviews.map((r) => ({ ...r, helpful: r.helpful + (state.liked[r.id] ? 1 : 0) }));
-  return mine ? [{ id: `mine-${c.id}`, mine: true, name: 'You', stars: mine.stars, text: mine.text, days: daysSince(mine.at), helpful: 0 }, ...list] : list;
+  return mine ? [{ id: `mine-${c.id}`, mine: true, name: t('comm.you'), stars: mine.stars, text: mine.text, days: daysSince(mine.at), helpful: 0 }, ...list] : list;
 }
 
 const REVIEW_SORTS = [
-  { id: 'helpful', label: 'Most helpful', cmp: (a, b) => b.helpful - a.helpful || a.days - b.days },
-  { id: 'newest', label: 'Newest', cmp: (a, b) => a.days - b.days || b.helpful - a.helpful },
-  { id: 'highest', label: 'Highest rated', cmp: (a, b) => b.stars - a.stars || b.helpful - a.helpful },
-  { id: 'lowest', label: 'Lowest rated', cmp: (a, b) => a.stars - b.stars || b.helpful - a.helpful },
+  { id: 'helpful', label: t('sort.helpful'), cmp: (a, b) => b.helpful - a.helpful || a.days - b.days },
+  { id: 'newest', label: t('sort.newest'), cmp: (a, b) => a.days - b.days || b.helpful - a.helpful },
+  { id: 'highest', label: t('sort.highest'), cmp: (a, b) => b.stars - a.stars || b.helpful - a.helpful },
+  { id: 'lowest', label: t('sort.lowest'), cmp: (a, b) => a.stars - b.stars || b.helpful - a.helpful },
 ];
 
 function reviewsPanel(c) {
@@ -588,23 +622,23 @@ function reviewsPanel(c) {
   const max = Math.max(1, ...rt.dist);
   return `
     <div class="card rating-summary">
-      <div class="rating-big"><b>${rt.avg.toFixed(1)}</b>${starsHtml(rt.avg, 18)}<span>${rt.count.toLocaleString('en-US')} ratings</span></div>
+      <div class="rating-big"><b>${oneDecimal(rt.avg)}</b>${starsHtml(rt.avg, 18)}<span>${fmtNum(rt.count)} ${tn('n.ratings', rt.count)}</span></div>
       <div class="dist">${rt.dist.map((n, i) => {
         const st = 5 - i;
-        return `<button type="button" class="dist-row${v.filter === st ? ' on' : ''}" data-action="review-filter" data-n="${st}" aria-pressed="${v.filter === st}" aria-label="${st} stars: ${n} ratings. Show only these reviews">
+        return `<button type="button" class="dist-row${v.filter === st ? ' on' : ''}" data-action="review-filter" data-n="${st}" aria-pressed="${v.filter === st}" aria-label="${t('comm.distRow', { st, n })}">
           <span>${st}★</span><span class="dist-bar"><span style="width: ${(n / max) * 100}%"></span></span><span>${Math.round((n / Math.max(1, rt.count)) * 100)}%</span>
         </button>`;
       }).join('')}</div>
     </div>
     ${myReviewBlock(c, mine)}
     <div class="list-toolbar">
-      <span class="muted-small">${v.filter ? `${plural(shown.length, 'review')} with ${v.filter}★ · <button type="button" class="link-inline" data-action="review-filter" data-n="0">show all</button>` : plural(shown.length, 'written review')}</span>
-      <label class="mini-select"><span class="sr">Sort reviews</span>
+      <span class="muted-small">${v.filter ? `${tn('comm.filtered', shown.length, { st: v.filter })} · <button type="button" class="link-inline" data-action="review-filter" data-n="0">${t('comm.showAll')}</button>` : tn('n.writtenReview', shown.length)}</span>
+      <label class="mini-select"><span class="sr">${t('comm.sortReviews')}</span>
         <select data-select="reviewSort">${REVIEW_SORTS.map((x) => `<option value="${x.id}"${x.id === sort.id ? ' selected' : ''}>${x.label}</option>`).join('')}</select>
       </label>
     </div>
     <ul class="post-list">
-      ${shown.map((r) => reviewItem(r)).join('') || '<li class="muted-small empty-line">No written reviews with this rating yet.</li>'}
+      ${shown.map((r) => reviewItem(r)).join('') || `<li class="muted-small empty-line">${t('comm.noReviews')}</li>`}
     </ul>`;
 }
 
@@ -617,7 +651,7 @@ function reviewItem(r) {
           <div class="post-head"><b>${esc(r.name)}</b><span>${agoText(r.days)}</span></div>
           ${starsHtml(r.stars, 13)}
           ${r.text ? `<p>${esc(r.text)}</p>` : ''}
-          ${r.mine ? '' : `<div class="post-actions"><button type="button" class="post-btn${liked ? ' on' : ''}" data-action="like" data-id="${r.id}" aria-pressed="${liked}">${stroke(ICON.thumb, 15)} Helpful · ${r.helpful}</button></div>`}
+          ${r.mine ? '' : `<div class="post-actions"><button type="button" class="post-btn${liked ? ' on' : ''}" data-action="like" data-id="${r.id}" aria-pressed="${liked}">${stroke(ICON.thumb, 15)} ${t('comm.helpful', { n: r.helpful })}</button></div>`}
         </div>
       </li>`;
 }
@@ -628,34 +662,34 @@ function myReviewBlock(c, mine) {
     return `
     <div class="card review-lock">
       ${stroke(ICON.lock, 20, '#6E6990')}
-      <span><b>Only enrolled learners can rate</b><small>Enroll in ${esc(c.title)} to leave your stars and a review.</small></span>
-      <button type="button" class="btn-secondary small" data-action="enroll">Enroll</button>
+      <span><b>${t('comm.lockTitle')}</b><small>${t('comm.lockText', { title: esc(c.title) })}</small></span>
+      <button type="button" class="btn-secondary small" data-action="enroll">${t('comm.enroll')}</button>
     </div>`;
   }
   if (mine && !v.editing) {
     return `
     <div class="card my-review">
-      <span class="eyebrow-dark">Your review</span>
+      <span class="eyebrow-dark">${t('comm.yourReview')}</span>
       <ul class="post-list">${reviewItem(mine)}</ul>
       <div class="row-btns">
-        <button type="button" class="btn-secondary small" data-action="edit-review">Edit</button>
-        <button type="button" class="btn-ghost small" data-action="delete-review">Delete</button>
+        <button type="button" class="btn-secondary small" data-action="edit-review">${t('comm.edit')}</button>
+        <button type="button" class="btn-ghost small" data-action="delete-review">${t('comm.delete')}</button>
       </div>
     </div>`;
   }
   const stars = v.stars || (mine ? mine.stars : 0);
-  const words = ['Tap a star to rate', 'Not for me', 'It’s OK', 'Good', 'Really good', 'Loved it!'];
+  const words = t('comm.starWords');
   return `
     <form class="card review-form" data-form="review" onsubmit="return false">
-      <span class="eyebrow-dark">${mine ? 'Edit your review' : 'Rate this course'}</span>
-      <div class="star-pick" role="radiogroup" aria-label="Your rating">
-        ${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="star-btn${n <= stars ? ' on' : ''}" role="radio" aria-checked="${n === stars}" aria-label="${plural(n, 'star')}" data-action="rate-star" data-n="${n}">★</button>`).join('')}
+      <span class="eyebrow-dark">${mine ? t('comm.editReview') : t('comm.rate')}</span>
+      <div class="star-pick" role="radiogroup" aria-label="${t('comm.yourRating')}">
+        ${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="star-btn${n <= stars ? ' on' : ''}" role="radio" aria-checked="${n === stars}" aria-label="${tn('n.star', n)}" data-action="rate-star" data-n="${n}">★</button>`).join('')}
         <span class="star-word">${words[stars]}</span>
       </div>
-      <textarea data-draft="review-${c.id}" rows="3" maxlength="600" placeholder="What did you like? What could be better? (optional)">${state.drafts[`review-${c.id}`] != null ? draft(`review-${c.id}`) : mine ? esc(mine.text) : ''}</textarea>
+      <textarea data-draft="review-${c.id}" rows="3" maxlength="600" placeholder="${t('comm.reviewPh')}">${state.drafts[`review-${c.id}`] != null ? draft(`review-${c.id}`) : mine ? esc(mine.text) : ''}</textarea>
       <div class="row-btns">
-        ${mine ? '<button type="button" class="btn-ghost small" data-action="cancel-review">Cancel</button>' : ''}
-        <button type="button" class="btn-primary small" data-action="submit-review"${stars ? '' : ' disabled'}>${mine ? 'Save review' : 'Post review'}</button>
+        ${mine ? `<button type="button" class="btn-ghost small" data-action="cancel-review">${t('comm.cancel')}</button>` : ''}
+        <button type="button" class="btn-primary small" data-action="submit-review"${stars ? '' : ' disabled'}>${mine ? t('comm.saveReview') : t('comm.postReview')}</button>
       </div>
     </form>`;
 }
@@ -666,9 +700,9 @@ function allComments(c) {
   const lec = lecturerById(c.lecturer);
   const withMine = (cm) => [
     ...(cm.replies || []).map((r) => ({ ...r, name: r.lecturer && lec ? lec.name : r.name, likes: r.likes + (state.liked[r.id] ? 1 : 0) })),
-    ...(state.myReplies[cm.id] || []).map((r) => ({ id: r.id, mine: true, name: 'You', text: r.text, days: daysSince(r.at), likes: state.liked[r.id] ? 1 : 0, at: r.at })),
+    ...(state.myReplies[cm.id] || []).map((r) => ({ id: r.id, mine: true, name: t('comm.you'), text: r.text, days: daysSince(r.at), likes: state.liked[r.id] ? 1 : 0, at: r.at })),
   ];
-  const mine = (state.myComments[c.id] || []).map((cm) => ({ id: cm.id, mine: true, name: 'You', text: cm.text, days: daysSince(cm.at), likes: state.liked[cm.id] ? 1 : 0, at: cm.at }));
+  const mine = (state.myComments[c.id] || []).map((cm) => ({ id: cm.id, mine: true, name: t('comm.you'), text: cm.text, days: daysSince(cm.at), likes: state.liked[cm.id] ? 1 : 0, at: cm.at }));
   return [...mine, ...comm(c).comments].map((cm) => ({ ...cm, likes: cm.mine ? cm.likes : cm.likes + (state.liked[cm.id] ? 1 : 0), replies: withMine(cm) }));
 }
 
@@ -683,15 +717,15 @@ function discussionPanel(c) {
   list.sort(order);
   return `
     <form class="card comment-form" onsubmit="return false">
-      <textarea data-draft="comment-${c.id}" rows="2" maxlength="600" placeholder="Ask a question or share a tip with other learners">${draft(`comment-${c.id}`)}</textarea>
-      <div class="row-btns"><span class="muted-small">Anyone can join the discussion</span><button type="button" class="btn-primary small" data-action="post-comment">Post</button></div>
+      <textarea data-draft="comment-${c.id}" rows="2" maxlength="600" placeholder="${t('comm.commentPh')}">${draft(`comment-${c.id}`)}</textarea>
+      <div class="row-btns"><span class="muted-small">${t('comm.anyone')}</span><button type="button" class="btn-primary small" data-action="post-comment">${t('comm.post')}</button></div>
     </form>
     <div class="list-toolbar">
-      <span class="muted-small">${plural(list.length, 'thread')}</span>
-      <label class="mini-select"><span class="sr">Sort comments</span>
+      <span class="muted-small">${tn('n.thread', list.length)}</span>
+      <label class="mini-select"><span class="sr">${t('comm.sortComments')}</span>
         <select data-select="commentSort">
-          <option value="top"${v.commentSort === 'top' ? ' selected' : ''}>Top</option>
-          <option value="newest"${v.commentSort === 'newest' ? ' selected' : ''}>Newest</option>
+          <option value="top"${v.commentSort === 'top' ? ' selected' : ''}>${t('comm.top')}</option>
+          <option value="newest"${v.commentSort === 'newest' ? ' selected' : ''}>${t('comm.newest')}</option>
         </select>
       </label>
     </div>
@@ -706,18 +740,18 @@ function commentItem(c, cm, isReply = false) {
       <li class="post${cm.mine ? ' mine' : ''}${isReply ? ' reply' : ''}">
         ${avatar(cm.name, cm.mine ? '#6C4CF1' : cm.lecturer ? s.color : null, isReply)}
         <div class="post-body">
-          <div class="post-head"><b>${esc(cm.name)}</b>${cm.lecturer ? `<span class="lec-badge" style="background: ${s.tint}; color: ${s.text}">Lecturer</span>` : ''}<span>${agoText(cm.days)}</span></div>
+          <div class="post-head"><b>${esc(cm.name)}</b>${cm.lecturer ? `<span class="lec-badge" style="background: ${s.tint}; color: ${s.text}">${t('comm.lecturer')}</span>` : ''}<span>${agoText(cm.days)}</span></div>
           <p>${esc(cm.text)}</p>
           <div class="post-actions">
-            <button type="button" class="post-btn${liked ? ' on' : ''}" data-action="like" data-id="${cm.id}" aria-pressed="${liked}" aria-label="Like${cm.likes ? `, ${cm.likes} likes` : ''}">${stroke(ICON.heart, 15)} ${cm.likes || ''}</button>
-            ${isReply ? '' : `<button type="button" class="post-btn" data-action="reply-open" data-id="${cm.id}" aria-expanded="${replying}">${stroke(ICON.reply, 15)} Reply</button>`}
-            ${cm.mine ? `<button type="button" class="post-btn" data-action="delete-comment" data-id="${cm.id}">Delete</button>` : ''}
+            <button type="button" class="post-btn${liked ? ' on' : ''}" data-action="like" data-id="${cm.id}" aria-pressed="${liked}" aria-label="${cm.likes ? t('comm.likes', { n: cm.likes }) : t('comm.like')}">${stroke(ICON.heart, 15)} ${cm.likes || ''}</button>
+            ${isReply ? '' : `<button type="button" class="post-btn" data-action="reply-open" data-id="${cm.id}" aria-expanded="${replying}">${stroke(ICON.reply, 15)} ${t('comm.reply')}</button>`}
+            ${cm.mine ? `<button type="button" class="post-btn" data-action="delete-comment" data-id="${cm.id}">${t('comm.delete')}</button>` : ''}
           </div>
           ${!isReply && (cm.replies.length || replying) ? `<ul class="post-list replies">
             ${cm.replies.map((r) => commentItem(c, r, true)).join('')}
             ${replying ? `<li class="reply-form">
-              <textarea data-draft="reply-${cm.id}" rows="2" maxlength="600" placeholder="Reply to ${esc(cm.name)}" data-autofocus>${draft(`reply-${cm.id}`)}</textarea>
-              <div class="row-btns"><button type="button" class="btn-ghost small" data-action="reply-open" data-id="${cm.id}">Cancel</button><button type="button" class="btn-primary small" data-action="post-reply" data-id="${cm.id}">Reply</button></div>
+              <textarea data-draft="reply-${cm.id}" rows="2" maxlength="600" placeholder="${t('comm.replyTo', { name: esc(cm.name) })}" data-autofocus>${draft(`reply-${cm.id}`)}</textarea>
+              <div class="row-btns"><button type="button" class="btn-ghost small" data-action="reply-open" data-id="${cm.id}">${t('comm.cancel')}</button><button type="button" class="btn-primary small" data-action="post-reply" data-id="${cm.id}">${t('comm.reply')}</button></div>
             </li>` : ''}
           </ul>` : ''}
         </div>
@@ -726,8 +760,8 @@ function commentItem(c, cm, isReply = false) {
 
 // ---------------------------------------------------------------- courses (catalog)
 
-const KIND_LABEL = { science: 'Science', language: 'Languages', skills: 'Soft skills', logic: 'Coding', arts: 'Arts' };
-const STATUS_LABEL = { enrolled: 'Enrolled', open: 'Not enrolled', started: 'In progress', completed: 'Completed' };
+const KIND_LABEL = Object.fromEntries(['science', 'language', 'skills', 'logic', 'arts'].map((k) => [k, t(`kind.${k}`)]));
+const STATUS_LABEL = Object.fromEntries(['enrolled', 'open', 'started', 'completed'].map((k) => [k, t(`status.${k}`)]));
 const courseStatus = (c) => {
   const st = [];
   st.push(isEnrolled(c) ? 'enrolled' : 'open');
@@ -738,15 +772,15 @@ const courseStatus = (c) => {
 
 // Each sort has a default direction; `asc`/`desc` labels say what the toggle means for it.
 const CATALOG_SORTS = [
-  { id: 'rating', label: 'Rating', key: (c) => ratingFor(c).avg, dir: 'desc', desc: 'Highest first', asc: 'Lowest first' },
-  { id: 'reviews', label: 'Number of ratings', key: (c) => ratingFor(c).count, dir: 'desc', desc: 'Most first', asc: 'Fewest first' },
-  { id: 'learners', label: 'Learners', key: learnersFor, dir: 'desc', desc: 'Most first', asc: 'Fewest first' },
-  { id: 'title', label: 'Title', key: (c) => c.title.toLowerCase(), dir: 'asc', desc: 'Z to A', asc: 'A to Z' },
-  { id: 'minutes', label: 'Length', key: courseMinutes, dir: 'asc', desc: 'Longest first', asc: 'Shortest first' },
-  { id: 'lessons', label: 'Lessons', key: (c) => courseLessons(c).length, dir: 'desc', desc: 'Most first', asc: 'Fewest first' },
-  { id: 'progress', label: 'My progress', key: (c) => courseDone(c) / Math.max(1, courseLessons(c).length), dir: 'desc', desc: 'Most done first', asc: 'Least done first' },
-  { id: 'subject', label: 'Subject', key: (c) => c.subject.toLowerCase(), dir: 'asc', desc: 'Z to A', asc: 'A to Z' },
-];
+  { id: 'rating', key: (c) => ratingFor(c).avg, dir: 'desc', desc: 'dir.highFirst', asc: 'dir.lowFirst' },
+  { id: 'reviews', key: (c) => ratingFor(c).count, dir: 'desc', desc: 'dir.mostFirst', asc: 'dir.fewestFirst' },
+  { id: 'learners', key: learnersFor, dir: 'desc', desc: 'dir.mostFirst', asc: 'dir.fewestFirst' },
+  { id: 'title', key: (c) => c.title.toLowerCase(), dir: 'asc', desc: 'dir.za', asc: 'dir.az' },
+  { id: 'minutes', key: courseMinutes, dir: 'asc', desc: 'dir.longFirst', asc: 'dir.shortFirst' },
+  { id: 'lessons', key: (c) => courseLessons(c).length, dir: 'desc', desc: 'dir.mostFirst', asc: 'dir.fewestFirst' },
+  { id: 'progress', key: (c) => courseDone(c) / Math.max(1, courseLessons(c).length), dir: 'desc', desc: 'dir.mostDone', asc: 'dir.leastDone' },
+  { id: 'subject', key: (c) => c.subjectInfo.label.toLowerCase(), dir: 'asc', desc: 'dir.za', asc: 'dir.az' },
+].map((x) => ({ ...x, label: t(`csort.${x.id}`), desc: t(x.desc), asc: t(x.asc) }));
 const sortDef = (id) => CATALOG_SORTS.find((x) => x.id === id);
 const RATING_STEPS = [0, 4.5, 4.6];
 // Filters use the rating as shown (one decimal), so a course showing 4.5 passes "4.5 & up".
@@ -757,7 +791,7 @@ function catalogFiltered(skip) {
   const q = f.q.trim().toLowerCase();
   return courses.filter((c) => {
     const lec = lecturerById(c.lecturer);
-    if (q && ![c.title, c.blurb, c.subject, c.subjectInfo.topic, lec ? lec.name : ''].some((t) => t.toLowerCase().includes(q))) return false;
+    if (q && ![c.title, c.blurb, c.subject, c.subjectInfo.label, c.subjectInfo.topic, lec ? lec.name : ''].some((x) => String(x).toLowerCase().includes(q))) return false;
     if (skip !== 'kind' && f.kind.length && !f.kind.includes(c.subjectInfo.kind)) return false;
     if (skip !== 'audience' && f.audience.length && !f.audience.includes(c.audience || 'adult')) return false;
     if (skip !== 'lecturer' && f.lecturer.length && !f.lecturer.includes(c.lecturer)) return false;
@@ -809,16 +843,16 @@ function catalogCard(c) {
   const total = courseLessons(c).length;
   const done = courseDone(c);
   const st = courseStatus(c);
-  const badge = st.includes('completed') ? ['Completed', 'done'] : st.includes('started') ? ['In progress', 'started'] : st.includes('enrolled') ? ['Enrolled', 'enrolled'] : null;
+  const badge = st.includes('completed') ? [STATUS_LABEL.completed, 'done'] : st.includes('started') ? [STATUS_LABEL.started, 'started'] : st.includes('enrolled') ? [STATUS_LABEL.enrolled, 'enrolled'] : null;
   return `
     <li><a class="course-card" href="#course/${c.id}">
       <span class="cc-icon" style="background: ${s.tint}">${stroke(s.icon, 22, s.color)}</span>
       <span class="cc-body">
-        <span class="cc-top"><small style="color: ${s.text}">${s.name}${KIND_LABEL[s.kind] && KIND_LABEL[s.kind] !== s.name ? ` · ${KIND_LABEL[s.kind]}` : ''}</small>${badge ? `<span class="cc-badge ${badge[1]}">${badge[0]}</span>` : ''}</span>
+        <span class="cc-top"><small style="color: ${s.text}">${s.label}${KIND_LABEL[s.kind] && KIND_LABEL[s.kind] !== s.label ? ` · ${KIND_LABEL[s.kind]}` : ''}</small>${langBadge(c)}${badge ? `<span class="cc-badge ${badge[1]}">${badge[0]}</span>` : ''}</span>
         <b>${c.title}</b>
-        ${lec ? `<span class="cc-lec">with ${esc(lec.name)}</span>` : ''}
-        <span class="cc-rating"><b>${rt.avg.toFixed(1)}</b>${starsHtml(rt.avg, 13)}<span>(${rt.count.toLocaleString('en-US')})</span></span>
-        <span class="cc-meta">${stroke(ICON.people, 14)} ${compact(learnersFor(c))} · ${stroke(ICON.slides, 14)} ${plural(total, 'lesson')} · ${stroke(ICON.clock, 14)} ${courseMinutes(c)} min · ${c.audience === 'kids' ? 'Kids' : 'Adults'}</span>
+        ${lec ? `<span class="cc-lec">${t('cat.with', { name: esc(lec.name) })}</span>` : ''}
+        <span class="cc-rating"><b>${oneDecimal(rt.avg)}</b>${starsHtml(rt.avg, 13)}<span>(${fmtNum(rt.count)})</span></span>
+        <span class="cc-meta">${stroke(ICON.people, 14)} ${compact(learnersFor(c))} · ${stroke(ICON.slides, 14)} ${tn('n.lesson', total)} · ${stroke(ICON.clock, 14)} ${t('minutes', { n: courseMinutes(c) })} · ${c.audience === 'kids' ? t('cat.kids') : t('cat.adults')}</span>
         ${done ? `<span class="meter"><span style="width: ${(done / total) * 100}%; background: ${s.color}"></span></span>` : ''}
       </span>
     </a></li>`;
@@ -827,12 +861,12 @@ function catalogCard(c) {
 function catalogResults() {
   const list = catalogSorted(catalogFiltered());
   return `
-    <p class="result-count">${plural(list.length, 'course')}${activeFilters() || state.catalog.q ? ` of ${courses.length}` : ''}</p>
+    <p class="result-count">${tn('n.course', list.length)}${activeFilters() || state.catalog.q ? t('cat.of', { n: courses.length }) : ''}</p>
     ${list.length ? `<ul class="course-list">${list.map(catalogCard).join('')}</ul>` : `
     <div class="card empty-results">
       ${ottoFull(90)}
-      <p>No courses match. Try fewer filters.</p>
-      <button type="button" class="btn-secondary small" data-action="catalog-clear">Clear search and filters</button>
+      <p>${t('cat.none')}</p>
+      <button type="button" class="btn-secondary small" data-action="catalog-clear">${t('cat.clearBoth')}</button>
     </div>`}`;
 }
 
@@ -843,13 +877,13 @@ function sortRow(i) {
   const opts = CATALOG_SORTS.filter((x) => !used.includes(x.id));
   return `
     <div class="sort-row">
-      <label class="sort-field"><span>${i === 0 ? 'Sort by' : 'Then by'}</span>
+      <label class="sort-field"><span>${i === 0 ? t('cat.sortBy') : t('cat.thenBy')}</span>
         <select data-sort="${i}">
-          ${i > 0 ? `<option value=""${def ? '' : ' selected'}>Nothing</option>` : ''}
+          ${i > 0 ? `<option value=""${def ? '' : ' selected'}>${t('cat.nothing')}</option>` : ''}
           ${opts.map((x) => `<option value="${x.id}"${def && def.id === x.id ? ' selected' : ''}>${x.label}</option>`).join('')}
         </select>
       </label>
-      ${def ? `<button type="button" class="dir-btn" data-action="catalog-dir" data-i="${i}" aria-label="Order: ${def[cur.dir]}. Tap to reverse">${stroke(cur.dir === 'desc' ? 'M12 5v14M6 13l6 6 6-6' : 'M12 19V5M6 11l6-6 6 6', 16)} ${def[cur.dir]}</button>` : ''}
+      ${def ? `<button type="button" class="dir-btn" data-action="catalog-dir" data-i="${i}" aria-label="${t('cat.dirAria', { dir: def[cur.dir] })}">${stroke(cur.dir === 'desc' ? 'M12 5v14M6 13l6 6 6-6' : 'M12 19V5M6 11l6-6 6 6', 16)} ${def[cur.dir]}</button>` : ''}
     </div>`;
 }
 
@@ -861,37 +895,37 @@ function coursesScreen() {
   return `
 <main class="screen catalog">
   <header class="page-head">
-    <h1>All courses</h1>
-    <p>${plural(courses.length, 'course')} across every arm. Find your next one.</p>
+    <h1>${t('cat.title')}</h1>
+    <p>${t('cat.intro', { courses: tn('n.course', courses.length) })}</p>
   </header>
 
   <label class="search">
     ${stroke(ICON.search, 20)}
-    <span class="sr">Search courses</span>
-    <input type="search" data-search value="${esc(f.q)}" placeholder="Search courses, topics, lecturers" autocomplete="off">
+    <span class="sr">${t('cat.search')}</span>
+    <input type="search" data-search value="${esc(f.q)}" placeholder="${t('cat.searchPh')}" autocomplete="off">
   </label>
 
   <div class="catalog-tools">
-    <button type="button" class="btn-chip${f.open ? ' open' : ''}" data-action="catalog-toggle" aria-expanded="${f.open}">${stroke(ICON.filter, 18)} Filters${nActive ? ` <span class="chip-n on">${nActive}</span>` : ''}</button>
-    ${nActive || f.q ? '<button type="button" class="link-btn" data-action="catalog-clear">Clear all</button>' : ''}
+    <button type="button" class="btn-chip${f.open ? ' open' : ''}" data-action="catalog-toggle" aria-expanded="${f.open}">${stroke(ICON.filter, 18)} ${t('cat.filters')}${nActive ? ` <span class="chip-n on">${nActive}</span>` : ''}</button>
+    ${nActive || f.q ? `<button type="button" class="link-btn" data-action="catalog-clear">${t('cat.clearAll')}</button>` : ''}
   </div>
 
   ${f.open ? `
-  <section class="card filters" aria-label="Filters and sorting">
-    ${filterGroup('Category', 'kind', kinds.map((k) => ({ id: k, label: KIND_LABEL[k] || k, test: (c) => c.subjectInfo.kind === k })))}
-    ${filterGroup('Audience', 'audience', [
-      { id: 'kids', label: 'Kids', test: (c) => c.audience === 'kids' },
-      { id: 'adult', label: 'Adults', test: (c) => (c.audience || 'adult') === 'adult' },
+  <section class="card filters" aria-label="${t('cat.filtersAria')}">
+    ${filterGroup(t('cat.category'), 'kind', kinds.map((k) => ({ id: k, label: KIND_LABEL[k] || k, test: (c) => c.subjectInfo.kind === k })))}
+    ${filterGroup(t('cat.audience'), 'audience', [
+      { id: 'kids', label: t('cat.kids'), test: (c) => c.audience === 'kids' },
+      { id: 'adult', label: t('cat.adults'), test: (c) => (c.audience || 'adult') === 'adult' },
     ])}
-    ${filterGroup('Lecturer', 'lecturer', lecIds.map((id) => ({ id, label: esc(lecturerById(id)?.name || id), test: (c) => c.lecturer === id })))}
-    ${filterGroup('Rating', 'rating', RATING_STEPS.map((r) => ({ id: r, label: r ? `${r}★ & up` : 'Any' })))}
-    ${filterGroup('My courses', 'status', Object.keys(STATUS_LABEL).map((id) => ({ id, label: STATUS_LABEL[id], test: (c) => courseStatus(c).includes(id) })))}
-    <div class="filter-group sorts" role="group" aria-label="Sorting">
-      <span class="filter-label">Sort</span>
+    ${filterGroup(t('cat.lecturer'), 'lecturer', lecIds.map((id) => ({ id, label: esc(lecturerById(id)?.name || id), test: (c) => c.lecturer === id })))}
+    ${filterGroup(t('cat.rating'), 'rating', RATING_STEPS.map((r) => ({ id: r, label: r ? t('cat.andUp', { r: oneDecimal(r) }) : t('cat.any') })))}
+    ${filterGroup(t('cat.mine'), 'status', Object.keys(STATUS_LABEL).map((id) => ({ id, label: STATUS_LABEL[id], test: (c) => courseStatus(c).includes(id) })))}
+    <div class="filter-group sorts" role="group" aria-label="${t('cat.sorting')}">
+      <span class="filter-label">${t('cat.sort')}</span>
       ${sortRow(0)}${sortRow(1)}
     </div>
   </section>` : `
-  <p class="sort-summary">Sorted by <b>${state.catalog.sort.map((x) => `${sortDef(x.id).label.toLowerCase()} (${sortDef(x.id)[x.dir].toLowerCase()})`).join('</b>, then <b>')}</b></p>`}
+  <p class="sort-summary">${t('cat.sortedBy')} <b>${state.catalog.sort.map((x) => `${sortDef(x.id).label.toLowerCase()} (${sortDef(x.id)[x.dir].toLowerCase()})`).join(`</b>${t('cat.then')} <b>`)}</b></p>`}
 
   <div class="catalog-results" aria-live="polite">${catalogResults()}</div>
 </main>
@@ -929,29 +963,29 @@ function slideScreen(run) {
     ${spots}
   </div>` : '';
 
-  const spotInfo = sl.spots ? `<div class="spot-info" aria-live="polite"><b>Tap the numbered dots</b> to explore each part. <span class="spot-count">0/${sl.spots.length} explored</span></div>` : '';
+  const spotInfo = sl.spots ? `<div class="spot-info" aria-live="polite">${t('slide.dots')} <span class="spot-count">${t('slide.explored', { seen: 0, n: sl.spots.length })}</span></div>` : '';
   const replay = sl.replay ? `<button type="button" class="btn-chip" data-action="replay">${stroke(ICON.play, 16, 'currentColor', 2.2)} ${sl.replay}</button>` : '';
 
   const phrases = sl.phrases ? `<ul class="phrases">${sl.phrases.map((p) => `
-    <li><button type="button" class="say-btn" data-action="say" data-text="${esc(p.say || p.es)}" data-lang="${p.lang || 'es-ES'}" aria-label="Listen: ${esc(p.es)}">${stroke(ICON.speaker, 20)}</button>
+    <li><button type="button" class="say-btn" data-action="say" data-text="${esc(p.say || p.es)}" data-lang="${p.lang || 'es-ES'}" aria-label="${t('slide.listen', { text: esc(p.es) })}">${stroke(ICON.speaker, 20)}</button>
       <span><b lang="${(p.lang || 'es-ES').slice(0, 2)}">${p.es}</b><small>${p.en}</small></span></li>`).join('')}</ul>` : '';
 
   const cards = sl.cards ? `<div class="flip-grid">${sl.cards.map((cd) => `
-    <button type="button" class="flip" data-action="flip" data-say="${esc(cd.front)}" data-lang="${cd.lang || 'es-ES'}" aria-pressed="false" aria-label="${esc(cd.front)}: tap to reveal">
+    <button type="button" class="flip" data-action="flip" data-say="${esc(cd.front)}" data-lang="${cd.lang || 'es-ES'}" aria-pressed="false" aria-label="${t('slide.reveal', { text: esc(cd.front) })}">
       <span class="flip-inner"><span class="flip-front" lang="${(cd.lang || 'es-ES').slice(0, 2)}">${cd.front}</span><span class="flip-back">${cd.back}</span></span>
     </button>`).join('')}</div>` : '';
 
   const code = sl.code ? `
   <div class="code-runner" data-step="-1">
-    <pre class="code" aria-label="Python code">${sl.code.lines.map((ln, i) => `<span class="ln" data-line="${i}">${esc(ln) || ' '}</span>`).join('')}</pre>
+    <pre class="code" aria-label="${t('slide.code')}">${sl.code.lines.map((ln, i) => `<span class="ln" data-line="${i}">${esc(ln) || ' '}</span>`).join('')}</pre>
     <div class="runner-btns">
-      <button type="button" class="btn-secondary" data-action="code-reset">Reset</button>
-      <button type="button" class="btn-primary small" data-action="code-step">Run next line</button>
+      <button type="button" class="btn-secondary" data-action="code-reset">${t('slide.reset')}</button>
+      <button type="button" class="btn-primary small" data-action="code-step">${t('slide.runNext')}</button>
     </div>
-    <p class="code-note" aria-live="polite">Press <b>Run next line</b> to step through the program.</p>
+    <p class="code-note" aria-live="polite">${t('slide.codeNote')}</p>
     <div class="code-side">
-      <div><b>Variables</b><div class="vars">none yet</div></div>
-      <div><b>Output</b><div class="out"></div></div>
+      <div><b>${t('slide.vars')}</b><div class="vars">${t('slide.noVars')}</div></div>
+      <div><b>${t('slide.output')}</b><div class="out"></div></div>
     </div>
   </div>` : '';
 
@@ -960,13 +994,13 @@ function slideScreen(run) {
   return `
 <main class="screen player">
   <header class="lesson-top">
-    <a class="icon-btn" href="#course/${c.id}" aria-label="Close lesson">${stroke(ICON.close, 22, 'currentColor', 2.6)}</a>
+    <a class="icon-btn" href="#course/${c.id}" aria-label="${t('slide.close')}">${stroke(ICON.close, 22, 'currentColor', 2.6)}</a>
     ${segments(run)}
     <span class="counter">${run.slide + 1}/${l.slides.length}</span>
-    <button type="button" class="icon-btn note-btn" data-action="note" aria-pressed="${isNoted(l.id, run.slide)}" aria-label="Save slide to notebook">${bookmarkIcon(isNoted(l.id, run.slide))}</button>
+    <button type="button" class="icon-btn note-btn" data-action="note" aria-pressed="${isNoted(l.id, run.slide)}" aria-label="${t('slide.save')}">${bookmarkIcon(isNoted(l.id, run.slide))}</button>
   </header>
   <div class="slide-stage">
-    <article class="slide ${run.dir}" aria-roledescription="slide" aria-label="${run.slide + 1} of ${l.slides.length}">
+    <article class="slide ${run.dir}" aria-roledescription="slide" aria-label="${t('slide.of', { a: run.slide + 1, b: l.slides.length })}">
       <span class="tag" style="background: ${s.tint}; color: ${s.text}">${stroke(s.icon, 16, s.color, 2.4)} ${l.title}</span>
       <h1 class="slide-title">${sl.title}</h1>
       ${art}
@@ -979,8 +1013,8 @@ function slideScreen(run) {
   </div>
 </main>
 <footer class="sheet nav-sheet">
-  <button type="button" class="btn-secondary" data-action="prev"${first ? ' disabled' : ''}>Back</button>
-  <button type="button" class="btn-primary" data-action="next-slide">${last ? 'Start quiz' : 'Next'}</button>
+  <button type="button" class="btn-secondary" data-action="prev"${first ? ' disabled' : ''}>${t('slide.back')}</button>
+  <button type="button" class="btn-primary" data-action="next-slide">${last ? t('slide.startQuiz') : t('slide.next')}</button>
 </footer>`;
 }
 
@@ -989,10 +1023,10 @@ function introScreen(run) {
   return `
 <main class="screen finish">
   ${ottoFull(150)}
-  <h1>Quiz time!</h1>
-  <p>${plural(l.quiz.length, 'question')} about <b>${l.title}</b>. Get it right on the first try for <b>+15 ink</b>.</p>
-  <button type="button" class="btn-primary" data-action="start-quiz" data-autofocus>Start quiz</button>
-  <button type="button" class="btn-ghost" data-action="review">Review the slides</button>
+  <h1>${t('intro.title')}</h1>
+  <p>${tn('intro.text', l.quiz.length, { title: l.title })}</p>
+  <button type="button" class="btn-primary" data-action="start-quiz" data-autofocus>${t('slide.startQuiz')}</button>
+  <button type="button" class="btn-ghost" data-action="review">${t('intro.review')}</button>
 </main>`;
 }
 
@@ -1004,28 +1038,28 @@ function quizScreen(run) {
   const solved = run.checked && isCorrect(q, run);
   const pct = Math.round(((run.q + (solved ? 1 : 0)) / run.questions.length) * 100);
   const closeHref = run.kind === 'lesson' ? `#course/${run.lesson.course.id}` : '#home';
-  const tagText = run.kind === 'lesson' ? `Quiz · ${run.lesson.title}` : `${q.review ? 'Review · ' : ''}${s.name} · ${q.from || s.topic}`;
+  const tagText = run.kind === 'lesson' ? t('quiz.tag', { title: run.lesson.title }) : `${q.review ? t('quiz.review') : ''}${s.label} · ${q.from || s.topic}`;
 
   let media = '';
   if (q.art) media += `<figure class="figure">${q.art}</figure>`;
   if (q.code) media += `<pre class="code-block">${esc(q.code)}</pre>`;
-  if (q.say) media += `<button type="button" class="listen-btn" data-action="say" data-text="${esc(q.say.text)}" data-lang="${q.say.lang || 'es-ES'}">${stroke(ICON.speaker, 26)} <span>Play audio</span></button>`;
-  if (q.tones) media += `<button type="button" class="listen-btn" data-action="tones">${stroke(ICON.music, 24)} <span>Play the notes</span></button>`;
+  if (q.say) media += `<button type="button" class="listen-btn" data-action="say" data-text="${esc(q.say.text)}" data-lang="${q.say.lang || 'es-ES'}">${stroke(ICON.speaker, 26)} <span>${t('quiz.playAudio')}</span></button>`;
+  if (q.tones) media += `<button type="button" class="listen-btn" data-action="tones">${stroke(ICON.music, 24)} <span>${t('quiz.playNotes')}</span></button>`;
 
   let body;
   if (q.type === 'order') {
     const state2 = run.checked ? (solved ? ' right' : ' wrong') : '';
     body = `
-  <div class="order-answer${state2}" aria-label="Your order">
-    ${run.order.length ? run.order.map((i, k) => `<button type="button" class="chip placed" data-action="unplace" data-i="${i}"${run.checked ? ' disabled' : ''}><span class="chip-n">${k + 1}</span>${q.items[i]}</button>`).join('') : '<span class="order-hint">Tap the items below in the right order</span>'}
+  <div class="order-answer${state2}" aria-label="${t('quiz.yourOrder')}">
+    ${run.order.length ? run.order.map((i, k) => `<button type="button" class="chip placed" data-action="unplace" data-i="${i}"${run.checked ? ' disabled' : ''}><span class="chip-n">${k + 1}</span>${q.items[i]}</button>`).join('') : `<span class="order-hint">${t('quiz.orderHint')}</span>`}
   </div>
-  <div class="order-pool" aria-label="Items to place">
+  <div class="order-pool" aria-label="${t('quiz.pool')}">
     ${run.shuffle.filter((i) => !run.order.includes(i)).map((i) => `<button type="button" class="chip" data-action="place" data-i="${i}"${run.checked ? ' disabled' : ''}>${q.items[i]}</button>`).join('')}
   </div>`;
   } else {
     const opts = optionsFor(q);
     const long = opts.some((o) => o.length > 14);
-    body = `<div class="options${long ? ' long' : ''}" role="group" aria-label="Answers">${opts.map((o, idx) => {
+    body = `<div class="options${long ? ' long' : ''}" role="group" aria-label="${t('quiz.answers')}">${opts.map((o, idx) => {
       let cls = 'option';
       if (run.picked === o) cls += run.checked ? (o === answerLabel(q) ? ' right' : ' wrong') : ' selected';
       // After a right answer, fade the other options.
@@ -1037,10 +1071,10 @@ function quizScreen(run) {
   return `
 <main class="screen lesson">
   <header class="lesson-top">
-    <a class="icon-btn" href="${closeHref}" aria-label="Close quiz">${stroke(ICON.close, 22, 'currentColor', 2.6)}</a>
-    <div class="progress" role="progressbar" aria-label="Quiz progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><div style="width: ${pct}%"></div></div>
-    <span class="hearts${run.justLost ? ' lost' : ''}">${HEART()}${run.hearts}<span class="sr"> hearts left</span></span>
-    <button type="button" class="icon-btn sound-btn" data-action="toggle-sound" aria-pressed="${state.sound}" aria-label="Sound effects">${stroke(state.sound ? ICON.speaker : ICON.mute, 22)}</button>
+    <a class="icon-btn" href="${closeHref}" aria-label="${t('quiz.close')}">${stroke(ICON.close, 22, 'currentColor', 2.6)}</a>
+    <div class="progress" role="progressbar" aria-label="${t('quiz.progress')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><div style="width: ${pct}%"></div></div>
+    <span class="hearts${run.justLost ? ' lost' : ''}">${HEART()}${run.hearts}<span class="sr">${t('quiz.heartsSr')}</span></span>
+    <button type="button" class="icon-btn sound-btn" data-action="toggle-sound" aria-pressed="${state.sound}" aria-label="${t('quiz.sound')}">${stroke(state.sound ? ICON.speaker : ICON.mute, 22)}</button>
   </header>
   <span class="tag" style="background: ${s.tint}; color: ${s.text}">${stroke(s.icon, 16, s.color, 2.4)} ${tagText}</span>
   <h1 class="question">${q.prompt}</h1>
@@ -1054,23 +1088,23 @@ ${quizFooter(run, q)}`;
 function quizFooter(run, q) {
   if (!run.checked) {
     const ready = q.type === 'order' ? run.order.length === q.items.length : !!run.picked;
-    return `<footer class="sheet"><button type="button" class="btn-primary" data-action="check"${ready ? '' : ' disabled'}>Check</button></footer>`;
+    return `<footer class="sheet"><button type="button" class="btn-primary" data-action="check"${ready ? '' : ' disabled'}>${t('quiz.check')}</button></footer>`;
   }
   if (isCorrect(q, run)) {
     const last = run.q === run.questions.length - 1;
     return `
 <footer class="sheet good" role="status">
-  <div class="sheet-head"><span class="badge">${stroke(ICON.check, 22, '#fff', 3)}</span><strong>${run.praise} <span class="ink-pop">+${run.lastEarned} ink</span></strong></div>
-  ${run.combo >= 2 && run.firstTry ? `<span class="combo">${FLAME(16)} ${run.combo} in a row!</span>` : ''}
+  <div class="sheet-head"><span class="badge">${stroke(ICON.check, 22, '#fff', 3)}</span><strong>${run.praise} <span class="ink-pop">${t('ink', { n: run.lastEarned })}</span></strong></div>
+  ${run.combo >= 2 && run.firstTry ? `<span class="combo">${FLAME(16)} ${t('quiz.combo', { n: run.combo })}</span>` : ''}
   <p>${q.explain || ''}</p>
-  <button type="button" class="btn-primary green" data-action="next-q" data-autofocus>${last ? 'Finish' : 'Continue'}</button>
+  <button type="button" class="btn-primary green" data-action="next-q" data-autofocus>${last ? t('quiz.finish') : t('quiz.continue')}</button>
 </footer>`;
   }
   return `
 <footer class="sheet bad" role="status">
-  <div class="sheet-head"><span class="badge">${stroke(ICON.cross, 22, '#fff', 3)}</span><strong>Not quite</strong></div>
-  <p>Otto’s hint: ${q.hint || 'look back at what the slides showed.'}</p>
-  <button type="button" class="btn-primary red" data-action="retry" data-autofocus>Try again</button>
+  <div class="sheet-head"><span class="badge">${stroke(ICON.cross, 22, '#fff', 3)}</span><strong>${t('quiz.notQuite')}</strong></div>
+  <p>${t('quiz.hint', { hint: q.hint || t('quiz.hintDefault') })}</p>
+  <button type="button" class="btn-primary red" data-action="retry" data-autofocus>${t('quiz.retry')}</button>
 </footer>`;
 }
 
@@ -1080,20 +1114,20 @@ function doneScreen(run) {
     const arms = new Set(run.questions.map((q) => q.subject)).size;
     const left = missedKeys().length;
     const line = run.fixed
-      ? `You fixed ${plural(run.fixed, 'mistake')}${left ? `, ${left} still to review` : ' — nothing left to review'}.`
-      : run.reviewing ? `Still shaky on some — they'll come back next time.` : `You trained ${plural(arms, 'arm')} today.`;
+      ? t('done.fixed', { mistakes: tn('n.mistake', run.fixed), rest: left ? t('done.left', { n: left }) : t('done.noneLeft') })
+      : run.reviewing ? t('done.shaky') : t('done.trained', { arms: tn('n.arm', arms) });
     return `
 <main class="screen finish">
   ${ottoFull(170)}
-  <h1>${run.reviewing ? 'Review complete!' : 'Mix complete!'}</h1>
+  <h1>${run.reviewing ? t('done.reviewComplete') : t('done.mixComplete')}</h1>
   <p>${line}</p>
   <div class="stats">
-    <div class="stat"><b>+${run.earned}</b><span>ink drops</span></div>
-    <div class="stat"><b>${streakNow()}</b><span>day streak</span></div>
-    <div class="stat"><b>${run.hearts}</b><span>hearts left</span></div>
+    <div class="stat"><b>+${run.earned}</b><span>${t('done.inkDrops')}</span></div>
+    <div class="stat"><b>${streakNow()}</b><span>${t('done.dayStreak')}</span></div>
+    <div class="stat"><b>${run.hearts}</b><span>${t('done.heartsLeft')}</span></div>
   </div>
-  <a class="btn-primary" href="#progress" data-autofocus>See my nine brains</a>
-  <a class="btn-ghost" href="#home">Back to home</a>
+  <a class="btn-primary" href="#progress" data-autofocus>${t('home.seeBrains')}</a>
+  <a class="btn-ghost" href="#home">${t('done.backHome')}</a>
 </main>`;
   }
   const l = run.lesson;
@@ -1103,24 +1137,24 @@ function doneScreen(run) {
   return `
 <main class="screen finish">
   ${ottoFull(170)}
-  <h1>${perfect ? 'Perfect lesson!' : 'Lesson complete!'}</h1>
-  <p>You finished <b>${l.title}</b>.</p>
+  <h1>${perfect ? t('done.perfect') : t('done.complete')}</h1>
+  <p>${t('done.finished', { title: l.title })}</p>
   <div class="stats">
-    <div class="stat"><b>${run.firstTryCount}/${total}</b><span>first try</span></div>
-    <div class="stat"><b>+${run.earned}</b><span>ink drops</span></div>
-    <div class="stat"><b>${run.bestCombo}</b><span>best in a row</span></div>
+    <div class="stat"><b>${run.firstTryCount}/${total}</b><span>${t('done.firstTry')}</span></div>
+    <div class="stat"><b>+${run.earned}</b><span>${t('done.inkDrops')}</span></div>
+    <div class="stat"><b>${run.bestCombo}</b><span>${t('done.bestRow')}</span></div>
   </div>
   ${courseComplete(l.course) ? `
   <a class="cert-card" href="#certificate/${l.course.id}">
     <span class="shelf-icon" style="background: ${l.course.subjectInfo.tint}">${stroke(ICON.medal, 22, l.course.subjectInfo.color)}</span>
-    <span class="shelf-text"><b>Course complete!</b><span>See your certificate for ${l.course.title}</span></span>
+    <span class="shelf-text"><b>${t('done.courseComplete')}</b><span>${t('done.seeCert', { title: l.course.title })}</span></span>
     ${stroke('M9 6l6 6-6 6', 20, '#4A4566')}
   </a>` : ''}
   ${bonus ? bonusCard(l, bonus) : ''}
   ${next
-    ? `<a class="btn-primary" href="#lesson/${next.id}" data-autofocus>Next: ${next.title}</a>`
-    : `<a class="btn-primary" href="#course/${l.course.id}" data-autofocus>Back to the course</a>`}
-  <a class="btn-ghost" href="${next ? `#course/${l.course.id}` : '#home'}">${next ? 'Back to the course' : 'Back to home'}</a>
+    ? `<a class="btn-primary" href="#lesson/${next.id}" data-autofocus>${t('done.next', { title: next.title })}</a>`
+    : `<a class="btn-primary" href="#course/${l.course.id}" data-autofocus>${t('done.backCourse')}</a>`}
+  <a class="btn-ghost" href="${next ? `#course/${l.course.id}` : '#home'}">${next ? t('done.backCourse') : t('done.backHome')}</a>
 </main>`;
 }
 
@@ -1134,11 +1168,11 @@ function bonusCard(l, g) {
   <a class="bonus-card${isKids(l) ? ' kids' : ''}" href="#game/${l.id}/${g.id}" style="--game-color: ${s.color}; --game-tint: ${s.tint}">
     <span class="bonus-icon" aria-hidden="true">${stroke(ICON.game, 26, s.color)}</span>
     <span class="bonus-text">
-      <small>Bonus game${rec ? ` · best ${rec.best}/${rec.max}` : ''}</small>
+      <small>${t('bonus.game')}${rec ? t('bonus.best', { a: rec.best, b: rec.max }) : ''}</small>
       <b>${g.title}</b>
       <span>${g.blurb}</span>
     </span>
-    <span class="bonus-ink">${DROP(14)} ${isKids(l) ? '+10' : 'up to +20'}</span>
+    <span class="bonus-ink">${DROP(14)} ${isKids(l) ? '+10' : t('bonus.upTo')}</span>
   </a>`;
 }
 
@@ -1159,20 +1193,20 @@ function gameScreen(g) {
     return `
 <main class="screen finish">
   ${ottoFull(150)}
-  <h1>No game here yet</h1>
-  <p>This lesson doesn’t have enough content for a bonus game.</p>
-  <a class="btn-primary" href="#course/${c.id}" data-autofocus>Back to the course</a>
+  <h1>${t('game.none')}</h1>
+  <p>${t('game.noneText')}</p>
+  <a class="btn-primary" href="#course/${c.id}" data-autofocus>${t('done.backCourse')}</a>
 </main>`;
   }
   if (g.phase === 'play') {
     return `
 <main class="screen game${kids ? ' kids' : ''}" style="--game-color: ${s.color}; --game-tint: ${s.tint}">
   <header class="lesson-top">
-    <a class="icon-btn" href="#course/${c.id}" aria-label="Close game">${stroke(ICON.close, 22, 'currentColor', 2.6)}</a>
+    <a class="icon-btn" href="#course/${c.id}" aria-label="${t('game.close')}">${stroke(ICON.close, 22, 'currentColor', 2.6)}</a>
     <span class="game-name">${g.game.title}</span>
     <span class="game-hud" aria-live="polite"></span>
   </header>
-  <span class="tag" style="background: ${s.tint}; color: ${s.text}">${stroke(ICON.game, 16, s.color, 2.4)} Bonus · ${l.title}</span>
+  <span class="tag" style="background: ${s.tint}; color: ${s.text}">${stroke(ICON.game, 16, s.color, 2.4)} ${t('game.tag', { title: l.title })}</span>
   <div class="game-root"></div>
 </main>`;
   }
@@ -1182,24 +1216,24 @@ function gameScreen(g) {
   const stars = Math.max(1, Math.round((3 * r.score) / Math.max(1, r.max)));
   const rec = gameRecord(l, g.game);
   const stats = kids
-    ? `<div class="stars" role="img" aria-label="${stars} of 3 stars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}">★</span>`).join('')}</div>
-  <div class="stats two"><div class="stat"><b>+${g.ink}</b><span>ink drops</span></div><div class="stat"><b>${r.score}/${r.max}</b><span>score</span></div></div>`
+    ? `<div class="stars" role="img" aria-label="${t('game.stars', { n: stars })}">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}">★</span>`).join('')}</div>
+  <div class="stats two"><div class="stat"><b>+${g.ink}</b><span>${t('done.inkDrops')}</span></div><div class="stat"><b>${r.score}/${r.max}</b><span>${t('game.score')}</span></div></div>`
     : `<div class="stats">
-    <div class="stat"><b>${r.label || `${r.score}/${r.max}`}</b><span>${r.points != null ? `${r.points} pts` : 'score'}</span></div>
-    <div class="stat"><b>+${g.ink}</b><span>ink drops</span></div>
-    <div class="stat"><b>${rec ? rec.best : r.score}</b><span>personal best</span></div>
+    <div class="stat"><b>${r.label || `${r.score}/${r.max}`}</b><span>${r.points != null ? t('pts', { n: r.points }) : t('game.score')}</span></div>
+    <div class="stat"><b>+${g.ink}</b><span>${t('done.inkDrops')}</span></div>
+    <div class="stat"><b>${rec ? rec.best : r.score}</b><span>${t('game.best')}</span></div>
   </div>`;
   return `
 <main class="screen finish${kids ? ' kids-finish' : ''}">
   ${ottoFull(150)}
-  <h1>${kids ? 'You did it!' : g.best ? 'New best!' : 'Well played!'}</h1>
+  <h1>${kids ? t('game.didIt') : g.best ? t('game.newBest') : t('game.wellPlayed')}</h1>
   <p>${g.game.title} · <b>${l.title}</b></p>
   ${stats}
   ${next
-    ? `<a class="btn-primary" href="#lesson/${next.id}" data-autofocus>Next: ${next.title}</a>`
-    : `<a class="btn-primary" href="#course/${c.id}" data-autofocus>Back to the course</a>`}
-  <button type="button" class="btn-ghost" data-action="replay-game">Play again</button>
-  ${other ? `<a class="btn-ghost" href="#game/${l.id}/${other.id}">Try ${other.title} instead</a>` : ''}
+    ? `<a class="btn-primary" href="#lesson/${next.id}" data-autofocus>${t('done.next', { title: next.title })}</a>`
+    : `<a class="btn-primary" href="#course/${c.id}" data-autofocus>${t('done.backCourse')}</a>`}
+  <button type="button" class="btn-ghost" data-action="replay-game">${t('game.again')}</button>
+  ${other ? `<a class="btn-ghost" href="#game/${l.id}/${other.id}">${t('game.try', { title: other.title })}</a>` : ''}
 </main>`;
 }
 
@@ -1249,10 +1283,10 @@ function armsScreen() {
       <span class="arm-head">
         <span class="arm-icon" style="background: ${sub.tint}">${stroke(sub.icon, 18, sub.color)}</span>
         <span class="arm-text">
-          <span class="arm-name">${sub.name}</span>
-          <span class="arm-meta">${c.title} · ${courseDone(c)}/${courseLessons(c).length} lessons</span>
+          <span class="arm-name">${sub.label}</span>
+          <span class="arm-meta">${c.title} · ${t('lessonsFrac', { done: courseDone(c), total: courseLessons(c).length })}</span>
         </span>
-        <span class="arm-action">${action === 'pick-resting' ? (picked ? 'Picked' : 'Train') : picking ? 'Replace' : ''}</span>
+        <span class="arm-action">${action === 'pick-resting' ? (picked ? t('arms.picked') : t('arms.train')) : picking ? t('arms.replace') : ''}</span>
       </span>
     </button></li>`;
   };
@@ -1260,21 +1294,21 @@ function armsScreen() {
   return `
 <main class="screen arms-screen">
   <header class="course-top">
-    <a class="icon-btn" href="#progress" aria-label="Back to profile">${stroke(ICON.back, 24, 'currentColor', 2.6)}</a>
+    <a class="icon-btn" href="#progress" aria-label="${t('arms.back')}">${stroke(ICON.back, 24, 'currentColor', 2.6)}</a>
   </header>
   <header class="page-head">
-    <h1>Swap arms</h1>
-    <p>Otto trains eight subjects at a time. Swap one out whenever you like: your progress in every course is kept.</p>
+    <h1>${t('arms.title')}</h1>
+    <p>${t('arms.intro')}</p>
   </header>
 
-  <h3 class="section-title">Resting subjects</h3>
-  ${resting.length ? `<ul class="arm-list">${resting.map((sub) => row(sub, 'pick-resting')).join('')}</ul>` : '<p class="muted">Every subject is being trained.</p>'}
+  <h3 class="section-title">${t('arms.resting')}</h3>
+  ${resting.length ? `<ul class="arm-list">${resting.map((sub) => row(sub, 'pick-resting')).join('')}</ul>` : `<p class="muted">${t('arms.allTrained')}</p>`}
 
   <p class="swap-hint" aria-live="polite">${picking
-    ? `Now tap the arm that <b>${picking.name}</b> should replace.`
-    : 'Tap a resting subject to start training it.'}</p>
+    ? t('arms.nowTap', { name: picking.label })
+    : t('arms.tapResting')}</p>
 
-  <h3 class="section-title">Your eight arms</h3>
+  <h3 class="section-title">${t('arms.yours')}</h3>
   <ul class="arm-list">${armSubjects().map((sub) => row(sub, 'swap-arm')).join('')}</ul>
 </main>
 ${tabbar('progress')}`;
@@ -1287,14 +1321,14 @@ const RING = [[135, 5], [227, 43], [265, 135], [227, 227], [135, 265], [43, 227]
 const SPOKES = [[171, 41], [263, 79], [301, 171], [263, 263], [171, 301], [79, 263], [41, 171], [79, 79]];
 
 function progressScreen() {
-  const letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  const names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const letters = t('week.letters');
+  const names = t('week.names');
   const now = today();
   const dates = weekDays();
   const week = dates.map((date, i) => {
     const done = state.days.includes(date);
     const cls = done ? 'done' : date === now ? 'today' : date > now ? 'future' : 'missed';
-    const label = `${names[i]}: ${done ? 'learned' : date === now ? 'today, not yet' : date > now ? 'still to come' : 'missed'}`;
+    const label = `${names[i]}: ${done ? t('week.learned') : date === now ? t('week.today') : date > now ? t('week.future') : t('week.missed')}`;
     return `<div class="day" role="listitem" aria-label="${label}"><span class="dot ${cls}">${done ? stroke(ICON.check, 16, '#fff', 3.2) : ''}</span><span aria-hidden="true">${letters[i]}</span></div>`;
   }).join('');
   const active = dates.filter((d) => state.days.includes(d)).length;
@@ -1306,8 +1340,8 @@ function progressScreen() {
   return `
 <main class="screen progress-screen">
   <header class="page-head">
-    <h1>Your nine brains</h1>
-    <p>One central brain, eight learning arms. Tap an arm to open its course.</p>
+    <h1>${t('prog.title')}</h1>
+    <p>${t('prog.intro')}</p>
   </header>
 
   <div class="radial">
@@ -1321,19 +1355,19 @@ function progressScreen() {
     ${armSubjects().map((s, i) => {
       const c = courseFor(s.name);
       return `
-    <a class="node" href="#course/${c.id}" style="left: ${RING[i][0]}%; top: ${RING[i][1]}%; border-color: ${s.color}" aria-label="${s.name}, level ${s.level}, ${courseDone(c)} of ${courseLessons(c).length} lessons done">
-      <b>${s.level}</b><span>${s.name}</span>
+    <a class="node" href="#course/${c.id}" style="left: ${RING[i][0]}%; top: ${RING[i][1]}%; border-color: ${s.color}" aria-label="${t('prog.node', { name: s.label, level: s.level, done: courseDone(c), total: courseLessons(c).length })}">
+      <b>${s.level}</b><span${s.label.length > 10 ? ' class="long"' : ''}>${s.label}</span>
     </a>`;
     }).join('')}
   </div>
-  <a class="btn-secondary manage-arms" href="#arms">${stroke(ICON.swap, 18)} Swap arms</a>
+  <a class="btn-secondary manage-arms" href="#arms">${stroke(ICON.swap, 18)} ${t('home.swap')}</a>
 
-  <section class="card" aria-label="Streak">
-    <div class="card-head">${FLAME(22)}${streakNow()}-day streak</div>
-    <div class="week" role="list" aria-label="This week">${week}</div>
+  <section class="card" aria-label="${t('prog.streak')}">
+    <div class="card-head">${FLAME(22)}${tn('n.dayStreak', streakNow())}</div>
+    <div class="week" role="list" aria-label="${t('prog.thisWeek')}">${week}</div>
     <div class="goal-row">
-      <p class="goal-line">${active >= goal ? `<b>${plural(active, 'day')}</b> this week · goal of ${goal} reached!` : `<b>${active} of ${goal}</b> days this week`}</p>
-      <div class="goal-pick" role="group" aria-label="Weekly goal, days">
+      <p class="goal-line">${active >= goal ? t('prog.goalReached', { days: tn('n.day', active), goal }) : t('prog.goalLine', { active, goal })}</p>
+      <div class="goal-pick" role="group" aria-label="${t('prog.goalAria')}">
         ${[3, 5, 7].map((n) => `<button type="button" class="goal-btn${n === goal ? ' on' : ''}" data-action="goal" data-n="${n}" aria-pressed="${n === goal}">${n}</button>`).join('')}
       </div>
     </div>
@@ -1341,30 +1375,37 @@ function progressScreen() {
   </section>
 
   <div class="stats">
-    <div class="stat"><b>${(1240 + completedCount * 60 + (doneToday() ? 45 : 0)).toLocaleString('en-US')}</b><span>XP this week</span></div>
-    <div class="stat"><b>${state.lessons}</b><span>Lessons done</span></div>
-    <div class="stat"><b style="color: #C2412A">Coral</b><span>League</span></div>
+    <div class="stat"><b>${fmtNum(1240 + completedCount * 60 + (doneToday() ? 45 : 0))}</b><span>${t('prog.xp')}</span></div>
+    <div class="stat"><b>${state.lessons}</b><span>${t('prog.lessons')}</span></div>
+    <div class="stat"><b style="color: #C2412A">${t('prog.coral')}</b><span>${t('prog.league')}</span></div>
   </div>
 
-  <section class="card shelf" aria-label="Notebook and certificates">
+  <section class="card shelf" aria-label="${t('prog.shelf')}">
     <a class="shelf-row" href="#notebook">
       <span class="shelf-icon">${stroke(ICON.note, 20, '#6C4CF1')}</span>
-      <span class="shelf-text"><b>Notebook</b><span>${notes.length ? plural(notes.length, 'saved slide') : 'Save slides with the bookmark button'}</span></span>
+      <span class="shelf-text"><b>${t('prog.notebook')}</b><span>${notes.length ? tn('n.savedSlide', notes.length) : t('prog.notebookEmpty')}</span></span>
       ${stroke('M9 6l6 6-6 6', 20, '#4A4566')}
     </a>
     ${certs.length ? certs.map((c) => `
     <a class="shelf-row" href="#certificate/${c.id}">
       <span class="shelf-icon" style="background: ${c.subjectInfo.tint}">${stroke(ICON.medal, 20, c.subjectInfo.color)}</span>
-      <span class="shelf-text"><b>${c.title}</b><span>Certificate · ${c.subjectInfo.name}</span></span>
+      <span class="shelf-text"><b>${c.title}</b><span>${t('prog.cert', { name: c.subjectInfo.label })}</span></span>
       ${stroke('M9 6l6 6-6 6', 20, '#4A4566')}
     </a>`).join('') : `
     <div class="shelf-row muted">
       <span class="shelf-icon">${stroke(ICON.medal, 20, '#6E6990')}</span>
-      <span class="shelf-text"><b>Certificates</b><span>Finish every lesson in a course to earn one</span></span>
+      <span class="shelf-text"><b>${t('prog.certs')}</b><span>${t('prog.certsEmpty')}</span></span>
     </div>`}
   </section>
 
-  <button type="button" class="reset" data-action="reset">Reset demo</button>
+  <section class="card lang-card" aria-labelledby="lang-title">
+    <div class="card-head" id="lang-title">${t('prog.language')}<span class="lang-alt" lang="${LANG === 'en' ? 'sk' : 'en'}">${LANG === 'en' ? '·&nbsp;Jazyk' : '·&nbsp;Language'}</span></div>
+    <div class="goal-pick lang-pick" role="radiogroup" aria-labelledby="lang-title">
+      ${window.Octavo.LOCALES.map((code) => `<button type="button" class="goal-btn${code === LANG ? ' on' : ''}" role="radio" aria-checked="${code === LANG}" data-action="set-lang" data-lang="${code}" lang="${code}">${window.Octavo.LOCALE_NAMES[code]}</button>`).join('')}
+    </div>
+  </section>
+
+  <button type="button" class="reset" data-action="reset">${t('prog.reset')}</button>
 </main>
 ${tabbar('progress')}`;
 }
@@ -1372,15 +1413,15 @@ ${tabbar('progress')}`;
 // ---------------------------------------------------------------- certificate
 
 const courseComplete = (c) => courseLessons(c).length > 0 && courseDone(c) === courseLessons(c).length;
-const longDate = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+const longDate = (d) => fmtDate(d);
 
 function certificateScreen(c) {
   const s = c.subjectInfo;
   const ls = courseLessons(c);
   const back = `
   <header class="course-top">
-    <a class="icon-btn" href="#course/${c.id}" aria-label="Back to the course">${stroke(ICON.back, 24, 'currentColor', 2.6)}</a>
-    <span class="course-subject" style="color: ${s.text}">${s.name}</span>
+    <a class="icon-btn" href="#course/${c.id}" aria-label="${t('done.backCourse')}">${stroke(ICON.back, 24, 'currentColor', 2.6)}</a>
+    <span class="course-subject" style="color: ${s.text}">${s.label}</span>
   </header>`;
   if (!courseComplete(c)) {
     return `
@@ -1388,9 +1429,9 @@ function certificateScreen(c) {
   ${back}
   <section class="card cert-locked">
     ${stroke(ICON.lock, 28, '#6E6990')}
-    <h1>Certificate locked</h1>
-    <p>Finish all ${plural(ls.length, 'lesson')} of <b>${c.title}</b> to earn it. ${courseDone(c)} done so far.</p>
-    <a class="btn-primary" href="#course/${c.id}">Back to the course</a>
+    <h1>${t('cert.locked')}</h1>
+    <p>${t('cert.lockedText', { lessons: tn('n.lesson', ls.length), title: c.title, done: courseDone(c) })}</p>
+    <a class="btn-primary" href="#course/${c.id}">${t('done.backCourse')}</a>
   </section>
 </main>
 ${tabbar('progress')}`;
@@ -1404,20 +1445,20 @@ ${tabbar('progress')}`;
 <main class="screen cert-screen">
   ${back}
   <article class="certificate" style="--c: ${s.color}; --t: ${s.tint}">
-    <span class="cert-eyebrow">Certificate of completion</span>
+    <span class="cert-eyebrow">${t('cert.eyebrow')}</span>
     <div class="cert-seal">${ottoFace()}</div>
-    <p class="cert-small">This certifies that an Octavo learner has completed</p>
+    <p class="cert-small">${t('cert.certifies')}</p>
     <h1>${c.title}</h1>
-    <p class="cert-subject">${s.name} · ${plural(ls.length, 'lesson')}</p>
+    <p class="cert-subject">${s.label} · ${tn('n.lesson', ls.length)}</p>
     <div class="stats">
-      <div class="stat"><b>${total ? Math.round((score / total) * 100) : 100}%</b><span>first-try score</span></div>
-      <div class="stat"><b>${ls.length}/${ls.length}</b><span>lessons done</span></div>
-      <div class="stat"><b>${longDate(at)}</b><span>awarded</span></div>
+      <div class="stat"><b>${total ? Math.round((score / total) * 100) : 100}%</b><span>${t('cert.score')}</span></div>
+      <div class="stat"><b>${ls.length}/${ls.length}</b><span>${t('cert.lessons')}</span></div>
+      <div class="stat"><b>${longDate(at)}</b><span>${t('cert.awarded')}</span></div>
     </div>
-    ${lec ? `<div class="cert-sign"><b>${esc(lec.name)}</b><span>Lecturer</span></div>` : ''}
+    ${lec ? `<div class="cert-sign"><b>${esc(lec.name)}</b><span>${t('comm.lecturer')}</span></div>` : ''}
   </article>
-  <button type="button" class="btn-primary" data-action="share-cert" data-title="${esc(c.title)}">Share certificate</button>
-  <a class="btn-ghost" href="#course/${c.id}">Back to the course</a>
+  <button type="button" class="btn-primary" data-action="share-cert" data-title="${esc(c.title)}">${t('cert.share')}</button>
+  <a class="btn-ghost" href="#course/${c.id}">${t('done.backCourse')}</a>
 </main>
 ${tabbar('progress')}`;
 }
@@ -1429,8 +1470,8 @@ const validNotes = () => state.notes.filter((n) => { const l = lessonById(n.less
 const isNoted = (lessonId, slide) => state.notes.some((n) => n.lessonId === lessonId && n.slide === slide);
 const bookmarkIcon = (on) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="${on ? '#6C4CF1' : 'none'}" stroke="${on ? '#6C4CF1' : 'currentColor'}" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="${ICON.bookmark}"/></svg>`;
 const plainText = (html, max = 120) => {
-  const t = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
+  const s = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s;
 };
 
 function notebookScreen() {
@@ -1439,8 +1480,8 @@ function notebookScreen() {
   return `
 <main class="screen notebook">
   <header class="page-head">
-    <h1>Notebook</h1>
-    <p>Slides you saved to come back to. Tap one to open it.</p>
+    <h1>${t('note.title')}</h1>
+    <p>${t('note.intro')}</p>
   </header>
   ${groups.length ? groups.map(({ c, items }) => `
   <section class="note-group">
@@ -1453,21 +1494,21 @@ function notebookScreen() {
         return `
       <li class="note-item">
         <a href="#lesson/${l.id}/${n.slide}">
-          <small>${l.title} · slide ${n.slide + 1}</small>
+          <small>${t('note.slide', { title: l.title, n: n.slide + 1 })}</small>
           <b>${sl.title}</b>
           ${snippet ? `<span>${snippet}</span>` : ''}
         </a>
-        <button type="button" class="icon-btn" data-action="unnote" data-key="${noteKey(l.id, n.slide)}" aria-label="Remove ${esc(plainText(sl.title))} from notebook">${stroke(ICON.close, 18)}</button>
+        <button type="button" class="icon-btn" data-action="unnote" data-key="${noteKey(l.id, n.slide)}" aria-label="${t('note.remove', { title: esc(plainText(sl.title)) })}">${stroke(ICON.close, 18)}</button>
       </li>`;
       }).join('')}
     </ul>
   </section>`).join('') : `
   <section class="card note-empty">
     ${ottoFull(110)}
-    <p>Nothing saved yet. Tap the ${bookmarkIcon(false)} bookmark on any lesson slide to keep it here.</p>
-    <a class="btn-primary" href="#home">Find a lesson</a>
+    <p>${t('note.empty', { icon: bookmarkIcon(false) })}</p>
+    <a class="btn-primary" href="#home">${t('note.find')}</a>
   </section>`}
-  <a class="btn-ghost" href="#progress">Back to profile</a>
+  <a class="btn-ghost" href="#progress">${t('arms.back')}</a>
 </main>
 ${tabbar('progress')}`;
 }
@@ -1503,7 +1544,7 @@ function render() {
     const sl = run.lesson.slides[run.slide];
     const root = app.querySelector('.slide');
     if (sl.setup) {
-      try { sl.setup(root, { speak, tone, NOTE, toast: showToast }); } catch (err) { console.error(err); }
+      try { sl.setup(root, { speak, tone, NOTE, toast: showToast, lang: LANG, loc }); } catch (err) { console.error(err); }
     }
     if (sl.autoplay) setTimeout(() => replay(root), 350);
   }
@@ -1612,12 +1653,12 @@ function celebrate(fromEl, count = 18) {
 
 function showToast(msg) {
   app.querySelector('.toast')?.remove();
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.setAttribute('role', 'status');
-  t.textContent = msg;
-  app.appendChild(t);
-  setTimeout(() => t.remove(), 2200);
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.setAttribute('role', 'status');
+  el.textContent = msg;
+  app.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
 }
 
 function replay(root) {
@@ -1670,21 +1711,21 @@ const actions = {
     el.classList.add('active', 'seen');
     el.setAttribute('aria-pressed', 'true');
     const seen = root.querySelectorAll('.spot.seen').length;
-    root.querySelector('.spot-info').innerHTML = `<b>${p.label}.</b> ${p.info} <span class="spot-count">${seen}/${sl.spots.length} explored</span>`;
+    root.querySelector('.spot-info').innerHTML = `<b>${p.label}.</b> ${p.info} <span class="spot-count">${t('slide.explored', { seen, n: sl.spots.length })}</span>`;
   },
   flip(el) {
     el.classList.toggle('flipped');
     const flipped = el.classList.contains('flipped');
     el.setAttribute('aria-pressed', String(flipped));
-    el.setAttribute('aria-label', flipped ? `${el.dataset.say}: ${el.querySelector('.flip-back').textContent}` : `${el.dataset.say}: tap to reveal`);
+    el.setAttribute('aria-label', flipped ? `${el.dataset.say}: ${el.querySelector('.flip-back').textContent}` : t('slide.reveal', { text: el.dataset.say }));
     if (flipped && el.dataset.say) speak(el.dataset.say, el.dataset.lang || 'es-ES');
   },
   say(el) {
-    if (!speak(el.dataset.text, el.dataset.lang)) showToast('Audio isn’t available on this device');
+    if (!speak(el.dataset.text, el.dataset.lang)) showToast(t('toast.noAudio'));
   },
   tones() {
     const q = state.run.questions[state.run.q];
-    if (!tone(q.tones)) showToast('Audio isn’t available on this device');
+    if (!tone(q.tones)) showToast(t('toast.noAudio'));
   },
   'code-step'(el) { codeStep(el.closest('.code-runner'), 1); },
   'code-reset'(el) { codeStep(el.closest('.code-runner'), 0); },
@@ -1779,7 +1820,7 @@ const actions = {
     save();
     render();
     if (state.sound) play('tap');
-    showToast(state.sound ? 'Sound effects on' : 'Sound effects off');
+    showToast(state.sound ? t('toast.soundOn') : t('toast.soundOff'));
   },
 
   // arms
@@ -1789,7 +1830,7 @@ const actions = {
     render();
   },
   'swap-arm'(el) {
-    if (!state.swapIn) { showToast('First pick a subject to train'); return; }
+    if (!state.swapIn) { showToast(t('toast.pickFirst')); return; }
     const out = el.dataset.name;
     const into = state.swapIn;
     state.arms = state.arms.map((n) => (n === out ? into : n));
@@ -1797,7 +1838,7 @@ const actions = {
     save();
     play('correct');
     render();
-    showToast(`${into} replaced ${out}. Progress is kept.`);
+    showToast(t('toast.swapped', { into: subject(into).label, out: subject(out).label }));
   },
 
   // bonus game
@@ -1820,13 +1861,13 @@ const actions = {
     el.setAttribute('aria-pressed', String(on));
     el.innerHTML = bookmarkIcon(on);
     play('tap');
-    showToast(on ? 'Saved to your notebook' : 'Removed from your notebook');
+    showToast(on ? t('toast.saved') : t('toast.removed'));
   },
   unnote(el) {
     state.notes = state.notes.filter((n) => noteKey(n.lessonId, n.slide) !== el.dataset.key);
     save();
     render();
-    showToast('Removed from your notebook');
+    showToast(t('toast.removed'));
   },
 
   // weekly goal and certificates
@@ -1835,13 +1876,16 @@ const actions = {
     save();
     play('tap');
     render();
-    showToast(`Goal: learn on ${state.weeklyGoal} days a week`);
+    showToast(t('toast.goal', { n: state.weeklyGoal }));
   },
   'share-cert'(el) {
-    const data = { title: 'My Octavo certificate', text: `I completed “${el.dataset.title}” on Octavo!`, url: location.href };
+    const data = { title: t('cert.shareTitle'), text: t('cert.shareText', { title: el.dataset.title }), url: location.href };
     if (navigator.share) { navigator.share(data).catch(() => { /* cancelled */ }); return; }
-    if (navigator.clipboard) navigator.clipboard.writeText(`${data.text} ${data.url}`).then(() => showToast('Link copied'), () => showToast('Couldn’t copy the link'));
-    else showToast('Sharing isn’t available here');
+    if (navigator.clipboard) navigator.clipboard.writeText(`${data.text} ${data.url}`).then(() => showToast(t('toast.copied')), () => showToast(t('toast.copyFail')));
+    else showToast(t('toast.noShare'));
+  },
+  'set-lang'(el) {
+    if (el.dataset.lang !== LANG) window.Octavo.setLang(el.dataset.lang);
   },
 
   // community: enrollment, ratings, reviews, discussion
@@ -1852,7 +1896,7 @@ const actions = {
     save();
     play('correct');
     renderKeep();
-    showToast(`Enrolled in ${c.title}`);
+    showToast(t('toast.enrolled', { title: c.title }));
   },
   'course-tab'(el) {
     state.view.tab = el.dataset.tab;
@@ -1884,7 +1928,7 @@ const actions = {
     save();
     play('correct');
     renderKeep();
-    showToast(prev ? 'Review updated' : 'Thanks for your review!');
+    showToast(prev ? t('toast.reviewUpdated') : t('toast.reviewThanks'));
   },
   'edit-review'() {
     const c = currentCourse();
@@ -1906,7 +1950,7 @@ const actions = {
     Object.assign(state.view, { editing: false, stars: 0 });
     save();
     renderKeep();
-    showToast('Review deleted');
+    showToast(t('toast.reviewDeleted'));
   },
   like(el) {
     const id = el.dataset.id;
@@ -1921,13 +1965,13 @@ const actions = {
     const c = currentCourse();
     const key = `comment-${c.id}`;
     const text = (state.drafts[key] || '').trim();
-    if (!text) { showToast('Write something first'); app.querySelector(`[data-draft="${key}"]`)?.focus(); return; }
+    if (!text) { showToast(t('toast.writeFirst')); app.querySelector(`[data-draft="${key}"]`)?.focus(); return; }
     state.myComments = { ...state.myComments, [c.id]: [{ id: newId(), text, at: new Date().toISOString() }, ...(state.myComments[c.id] || [])] };
     delete state.drafts[key];
     save();
     play('correct');
     renderKeep();
-    showToast('Posted to the discussion');
+    showToast(t('toast.posted'));
   },
   'reply-open'(el) {
     state.view.replyTo = state.view.replyTo === el.dataset.id ? null : el.dataset.id;
@@ -1937,14 +1981,14 @@ const actions = {
     const id = el.dataset.id;
     const key = `reply-${id}`;
     const text = (state.drafts[key] || '').trim();
-    if (!text) { showToast('Write a reply first'); return; }
+    if (!text) { showToast(t('toast.replyFirst')); return; }
     state.myReplies = { ...state.myReplies, [id]: [...(state.myReplies[id] || []), { id: newId(), text, at: new Date().toISOString() }] };
     delete state.drafts[key];
     state.view.replyTo = null;
     save();
     play('correct');
     renderKeep();
-    showToast('Reply posted');
+    showToast(t('toast.replied'));
   },
   'delete-comment'(el) {
     const id = el.dataset.id;
@@ -1957,7 +2001,7 @@ const actions = {
       .filter(([, list]) => list.length));
     save();
     renderKeep();
-    showToast('Deleted');
+    showToast(t('toast.deleted'));
   },
 
   // courses catalog
@@ -1986,7 +2030,7 @@ const actions = {
     state.catalog = { ...defaultCatalog(), open, sort };
     save();
     renderKeep();
-    showToast('Search and filters cleared');
+    showToast(t('toast.cleared'));
   },
 
   // misc
@@ -1995,7 +2039,7 @@ const actions = {
     stopGame();
     Object.assign(state, defaults(), { run: null, game: null, view: defaultCourseView(), drafts: {} });
     render();
-    showToast('Demo reset');
+    showToast(t('toast.reset'));
   },
   toast(el) { showToast(el.dataset.msg); },
 };
@@ -2012,13 +2056,13 @@ function codeStep(runner, mode) {
   const vars = step ? Object.entries(step.vars || {}) : [];
   runner.querySelector('.vars').innerHTML = vars.length
     ? vars.map(([k, v]) => `<span class="var"><b>${esc(k)}</b> = ${esc(v)}</span>`).join('')
-    : 'none yet';
+    : t('slide.noVars');
   runner.querySelector('.out').textContent = step && step.out ? step.out : '';
-  runner.querySelector('.code-note').innerHTML = step ? step.note : 'Press <b>Run next line</b> to step through the program.';
+  runner.querySelector('.code-note').innerHTML = step ? step.note : t('slide.codeNote');
   const btn = runner.querySelector('[data-action="code-step"]');
   const finished = i === steps.length - 1;
   btn.disabled = finished;
-  btn.textContent = finished ? 'Program finished' : 'Run next line';
+  btn.textContent = finished ? t('slide.finished') : t('slide.runNext');
   if (lines && step) runner.querySelector(`.ln[data-line="${step.line}"]`)?.scrollIntoView({ block: 'nearest' });
 }
 
@@ -2104,7 +2148,7 @@ route();
 // GitHub Pages lets browsers reuse files for up to 10 minutes, so a phone can keep
 // running an old copy after a release. Compare with version.json (fetched fresh)
 // and reload once when a newer release is out. Bump APP_VERSION with every release.
-const APP_VERSION = '9';
+const APP_VERSION = '14';
 function checkForUpdate() {
   fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : null))
