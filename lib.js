@@ -1,14 +1,19 @@
 'use strict';
 
 /* Shared helpers and the registries. Content files (content/*.js) call
-   Octavo.addCourse(...) and Octavo.addLecturer(...); game files (games/*.js) call
-   Octavo.addGame(...). app.js reads all three lists. */
+   Octavo.addCourse(...), Octavo.addLecturer(...) and Octavo.addCommunity(...);
+   game files (games/*.js) call Octavo.addGame(...). app.js reads all of them. */
 
 window.Octavo = (() => {
   const courses = [];
   const lecturers = [];
   const games = [];
+  const community = {}; // courseId -> { enrolled, ratings, reviews, comments }, see content/community.js
   let audioCtx = null;
+
+  function addCommunity(courseId, data) {
+    community[courseId] = data;
+  }
 
   function addCourse(course) {
     courses.push(course);
@@ -84,5 +89,5 @@ window.Octavo = (() => {
     return s ? tone(s.seq, s) : false;
   }
 
-  return { courses, lecturers, games, addCourse, addLecturer, addGame, speak, tone, sfx, NOTE };
+  return { courses, lecturers, games, community, addCourse, addLecturer, addGame, addCommunity, speak, tone, sfx, NOTE };
 })();

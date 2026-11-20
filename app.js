@@ -3,7 +3,8 @@
 /* Octavo clickable prototype: plain JavaScript, no build step, no dependencies.
    Routes (hash based, so the back button works):
      #home              home screen
-     #course/<id>       a subject's curriculum
+     #courses           every course, with search, filters and sorting
+     #course/<id>[/<t>] a subject's curriculum, ratings, reviews and discussion (t: reviews | discussion)
      #lesson/<id>[/<n>] interactive slides (optionally from slide n), then a quiz on them
      #practice          "Today's mix" / "Review my mistakes" quick quiz
      #progress          the "nine brains" profile screen
@@ -11,7 +12,7 @@
      #certificate/<id>  a finished course's certificate
      #game/<id>[/<g>]   the bonus game for a lesson (games/*.js), optionally a specific one */
 
-const { courses, lecturers, speak, tone, sfx, NOTE, rankGames, mountGame, stopGame } = window.Octavo;
+const { courses, lecturers, community, speak, tone, sfx, NOTE, rankGames, mountGame, stopGame } = window.Octavo;
 
 // ---------------------------------------------------------------- subjects
 
@@ -141,6 +142,15 @@ const ICON = {
   bookmark: 'M6 4h12v16l-6-4-6 4z',
   note: 'M5 4h11l3 3v13H5zM8 10h8M8 14h8M8 18h5',
   game: 'M6 9h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 14H9l-1.6 1.8A3 3 0 0 1 2 14v-1a4 4 0 0 1 4-4zM8 11v3M6.5 12.5h3M15.5 12h.01M18 13.5h.01',
+  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  search: 'M11 4a7 7 0 1 0 0.01 0M16 16l4 4',
+  filter: 'M4 6h16M7 12h10M10 18h4',
+  people: 'M9 11a3 3 0 1 0 0-6a3 3 0 0 0 0 6M3 20c.7-3.5 3-5 6-5s5.3 1.5 6 5M16 11a3 3 0 1 0 0-6M18 15c1.8.6 3 2.2 3.4 5',
+  thumb: 'M7 11v9H4v-9zM7 11l4-7a2 2 0 0 1 2.5 2.6L12.5 10H19a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7',
+  reply: 'M10 8L5 12l5 4M5 12h9a5 5 0 0 1 5 5v1',
+  chat: 'M4 5h16v11H9l-5 4z',
+  clock: 'M12 3a9 9 0 1 0 0.01 0M12 7v5l3 2',
+  heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
 };
 const stroke = (d, size = 24, color = 'currentColor', width = 2.2) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
@@ -165,8 +175,19 @@ const weekDays = () => { const offset = (new Date().getDay() + 6) % 7; return [.
 // misses: { 'lessonId#questionIndex': times missed } feeds "Review my mistakes".
 // days: the days something was learned, for the streak and the weekly goal.
 // notes: slides saved to the notebook, [{ lessonId, slide, at }].
-const SAVED_FIELDS = ['ink', 'lessons', 'completed', 'lastCourse', 'sound', 'arms', 'games', 'lastGame', 'misses', 'days', 'weeklyGoal', 'notes'];
-const defaults = () => ({ ink: 340, lessons: 38, completed: {}, lastCourse: 'nervous-system', sound: true, arms: [...DEFAULT_ARMS], games: {}, lastGame: null, misses: {}, days: seedDays(12), weeklyGoal: 5, notes: [] });
+// enrolled: { courseId: 'YYYY-MM-DD' } courses joined with the Enroll button.
+// myReviews: { courseId: { stars, text, at } }; myComments: { courseId: [{ id, text, at }] };
+// myReplies: { commentId: [{ id, text, at }] }; liked: { reviewOrCommentId: true }.
+// catalog: the Courses tab's search, filters and sort.
+const SAVED_FIELDS = ['ink', 'lessons', 'completed', 'lastCourse', 'sound', 'arms', 'games', 'lastGame', 'misses', 'days', 'weeklyGoal', 'notes',
+  'enrolled', 'myReviews', 'myComments', 'myReplies', 'liked', 'catalog'];
+const defaultCatalog = () => ({ q: '', kind: [], audience: [], lecturer: [], status: [], rating: 0, open: false, sort: [{ id: 'rating', dir: 'desc' }, { id: 'learners', dir: 'desc' }] });
+const defaults = () => ({
+  ink: 340, lessons: 38, completed: {}, lastCourse: 'nervous-system', sound: true, arms: [...DEFAULT_ARMS], games: {}, lastGame: null, misses: {}, days: seedDays(12), weeklyGoal: 5, notes: [],
+  enrolled: {}, myReviews: {}, myComments: {}, myReplies: {}, liked: {}, catalog: defaultCatalog(),
+});
+// What the course page is showing; not saved.
+const defaultCourseView = () => ({ tab: 'reviews', filter: 0, stars: 0, reviewSort: 'helpful', commentSort: 'top', editing: false, replyTo: null });
 
 function loadSaved() {
   let saved;
@@ -193,8 +214,11 @@ function streakNow() {
 }
 const qKey = (lessonId, i) => `${lessonId}#${i}`;
 
-const state = { route: { name: 'home' }, ...defaults(), ...loadSaved(), run: null, game: null, swapIn: null };
+const state = { route: { name: 'home' }, ...defaults(), ...loadSaved(), run: null, game: null, swapIn: null, view: defaultCourseView(), drafts: {}, courseFrom: 'home' };
 state.arms = validArms(state.arms);
+state.catalog = { ...defaultCatalog(), ...(state.catalog && typeof state.catalog === 'object' ? state.catalog : {}) };
+for (const k of ['kind', 'audience', 'lecturer', 'status']) if (!Array.isArray(state.catalog[k])) state.catalog[k] = [];
+if (!Array.isArray(state.catalog.sort) || !state.catalog.sort.length) state.catalog.sort = defaultCatalog().sort;
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function shuffled(n) {
@@ -280,6 +304,7 @@ function isCorrect(q, run) {
 function tabbar(active) {
   const tabs = [
     { id: 'home', label: 'Learn', href: '#home', icon: ICON.home },
+    { id: 'courses', label: 'Courses', href: '#courses', icon: ICON.grid },
     { id: 'practice', label: 'Practice', href: '#practice', icon: ICON.target },
     { id: 'leagues', label: 'Leagues', icon: ICON.trophy },
     { id: 'progress', label: 'Profile', href: '#progress', icon: ICON.user },
@@ -406,10 +431,12 @@ function courseScreen(c) {
   const done = courseDone(c);
   const upNext = nextLessonIn(c);
   let n = 0;
+  const fromCatalog = state.courseFrom === 'courses';
+  const rt = ratingFor(c);
   return `
 <main class="screen course">
   <header class="course-top">
-    <a class="icon-btn" href="#home" aria-label="Back to home">${stroke(ICON.back, 24, 'currentColor', 2.6)}</a>
+    <a class="icon-btn" href="${fromCatalog ? '#courses' : '#home'}" aria-label="${fromCatalog ? 'Back to all courses' : 'Back to home'}">${stroke(ICON.back, 24, 'currentColor', 2.6)}</a>
     <span class="course-subject" style="color: ${s.text}">${s.name}</span>
   </header>
 
@@ -420,6 +447,15 @@ function courseScreen(c) {
     <div class="hero-bar"><div class="meter"><span style="width: ${(done / total) * 100}%; background: ${s.color}"></span></div><span>${done}/${total} lessons</span></div>
     ${courseComplete(c) ? `<a class="cert-link" href="#certificate/${c.id}" style="color: ${s.text}">${stroke(ICON.medal, 18, s.color)} View your certificate</a>` : ''}
   </section>
+
+  <section class="course-facts" aria-label="Rating and learners">
+    <button type="button" class="fact" data-action="course-tab" data-tab="reviews" data-jump="1">
+      <b>${rt.avg.toFixed(1)} ${starsHtml(rt.avg, 14)}</b><span>${compact(rt.count)} ratings</span>
+    </button>
+    <div class="fact"><b>${compact(learnersFor(c))}</b><span>learners</span></div>
+    <div class="fact"><b>${courseMinutes(c)} min</b><span>${audienceLabel(c)}</span></div>
+  </section>
+  ${enrollBlock(c)}
 
   ${lecturerCard(lecturerById(c.lecturer), s)}
 
@@ -454,8 +490,412 @@ function courseScreen(c) {
     <h2><span>Unit ${c.units.length + i + 1}</span> ${t}</h2>
     <p class="soon-note">${stroke(ICON.lock, 16, '#6E6990')} Unlocks in the full app</p>
   </section>`).join('')}
+
+  ${communitySection(c)}
 </main>
-${tabbar('home')}`;
+${tabbar(fromCatalog ? 'courses' : 'home')}`;
+}
+
+// ---------------------------------------------------------------- community: enrollment, ratings, reviews, discussion
+// Sample learners, ratings, reviews and comments come from content/community.js; what
+// the learner adds (state.myReviews, myComments, myReplies, liked) is merged in here.
+
+const EMPTY_COMMUNITY = { enrolled: 0, ratings: [0, 0, 0, 0, 0], reviews: [], comments: [] };
+const comm = (c) => community[c.id] || EMPTY_COMMUNITY;
+// Enrolled: joined with the button, trained as one of the eight arms, or a lesson finished.
+const isEnrolled = (c) => !!state.enrolled[c.id] || state.arms.includes(c.subject) || courseDone(c) > 0;
+const learnersFor = (c) => comm(c).enrolled + (isEnrolled(c) ? 1 : 0);
+const courseMinutes = (c) => courseLessons(c).reduce((a, l) => a + (l.minutes || 0), 0);
+const audienceLabel = (c) => (c.audience === 'kids' ? 'For kids' : 'For adults');
+const compact = (n) => (n >= 10000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : n.toLocaleString('en-US'));
+
+// dist[0] is 5 stars … dist[4] is 1 star.
+function ratingFor(c) {
+  const m = comm(c);
+  const mine = state.myReviews[c.id];
+  const dist = [5, 4, 3, 2, 1].map((st, i) => (m.ratings[i] || 0) + m.reviews.filter((r) => r.stars === st).length + (mine && mine.stars === st ? 1 : 0));
+  const count = dist.reduce((a, b) => a + b, 0);
+  const avg = count ? dist.reduce((a, n, i) => a + n * (5 - i), 0) / count : 0;
+  return { avg, count, dist };
+}
+
+// Five stars, filled to `value` (partial stars allowed).
+const starsHtml = (value, size = 14) =>
+  `<span class="stars-rating" style="font-size: ${size}px" role="img" aria-label="${value.toFixed(1)} out of 5 stars"><span class="stars-on" style="width: ${Math.max(0, Math.min(100, (value / 5) * 100))}%">★★★★★</span>★★★★★</span>`;
+
+const daysSince = (iso) => Math.max(0, Math.round((new Date(`${today()}T12:00:00`) - new Date(`${ymd(new Date(iso))}T12:00:00`)) / 864e5));
+function agoText(days) {
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${plural(Math.floor(days / 7), 'week')} ago`;
+  return `${plural(Math.floor(days / 30), 'month')} ago`;
+}
+
+const AVATAR_COLORS = ['#E8613F', '#0090C1', '#8E4EC6', '#D18A00', '#12A594', '#30A46C', '#D6409F', '#3E63DD', '#6E8B1E', '#E5484D'];
+const avatarColor = (name) => AVATAR_COLORS[[...name].reduce((a, ch) => a + ch.charCodeAt(0), 0) % AVATAR_COLORS.length];
+const avatar = (name, color, small) => `<span class="avatar${small ? ' small' : ''}" style="background: ${color || avatarColor(name)}" aria-hidden="true">${esc(initials(name))}</span>`;
+const newId = () => `me-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+const draft = (key) => esc(state.drafts[key] || '');
+
+function enrollBlock(c) {
+  const s = c.subjectInfo;
+  if (!isEnrolled(c)) {
+    return `
+  <section class="enroll-card">
+    <span><b>Join ${compact(learnersFor(c))} learners</b><small>Enroll to track this course and rate it.</small></span>
+    <button type="button" class="btn-primary small" data-action="enroll" style="background: ${s.color}">Enroll</button>
+  </section>`;
+  }
+  const why = state.enrolled[c.id] ? `since ${longDate(state.enrolled[c.id])}` : state.arms.includes(c.subject) ? 'as one of your eight arms' : 'from your lessons';
+  return `<p class="enrolled-note">${stroke(ICON.check, 16, '#1F8A4C', 3)} <b>Enrolled</b> ${why}</p>`;
+}
+
+function communitySection(c) {
+  const v = state.view;
+  const nComments = allComments(c).reduce((a, cm) => a + 1 + cm.replies.length, 0);
+  const nReviews = allReviews(c).length;
+  const tab = (id, label, n) => `<button type="button" role="tab" class="seg-tab${v.tab === id ? ' on' : ''}" data-action="course-tab" data-tab="${id}" aria-selected="${v.tab === id}">${label} <span>${n}</span></button>`;
+  return `
+  <section class="community" id="community" aria-label="Reviews and discussion">
+    <div class="seg-tabs" role="tablist">${tab('reviews', 'Reviews', nReviews)}${tab('discussion', 'Discussion', nComments)}</div>
+    ${v.tab === 'discussion' ? discussionPanel(c) : reviewsPanel(c)}
+  </section>`;
+}
+
+// ---- reviews
+
+function allReviews(c) {
+  const mine = state.myReviews[c.id];
+  const list = comm(c).reviews.map((r) => ({ ...r, helpful: r.helpful + (state.liked[r.id] ? 1 : 0) }));
+  return mine ? [{ id: `mine-${c.id}`, mine: true, name: 'You', stars: mine.stars, text: mine.text, days: daysSince(mine.at), helpful: 0 }, ...list] : list;
+}
+
+const REVIEW_SORTS = [
+  { id: 'helpful', label: 'Most helpful', cmp: (a, b) => b.helpful - a.helpful || a.days - b.days },
+  { id: 'newest', label: 'Newest', cmp: (a, b) => a.days - b.days || b.helpful - a.helpful },
+  { id: 'highest', label: 'Highest rated', cmp: (a, b) => b.stars - a.stars || b.helpful - a.helpful },
+  { id: 'lowest', label: 'Lowest rated', cmp: (a, b) => a.stars - b.stars || b.helpful - a.helpful },
+];
+
+function reviewsPanel(c) {
+  const v = state.view;
+  const rt = ratingFor(c);
+  const sort = REVIEW_SORTS.find((x) => x.id === v.reviewSort) || REVIEW_SORTS[0];
+  const all = allReviews(c);
+  const mine = all.find((r) => r.mine);
+  const shown = all.filter((r) => !r.mine && (!v.filter || r.stars === v.filter)).sort(sort.cmp);
+  const max = Math.max(1, ...rt.dist);
+  return `
+    <div class="card rating-summary">
+      <div class="rating-big"><b>${rt.avg.toFixed(1)}</b>${starsHtml(rt.avg, 18)}<span>${rt.count.toLocaleString('en-US')} ratings</span></div>
+      <div class="dist">${rt.dist.map((n, i) => {
+        const st = 5 - i;
+        return `<button type="button" class="dist-row${v.filter === st ? ' on' : ''}" data-action="review-filter" data-n="${st}" aria-pressed="${v.filter === st}" aria-label="${st} stars: ${n} ratings. Show only these reviews">
+          <span>${st}★</span><span class="dist-bar"><span style="width: ${(n / max) * 100}%"></span></span><span>${Math.round((n / Math.max(1, rt.count)) * 100)}%</span>
+        </button>`;
+      }).join('')}</div>
+    </div>
+    ${myReviewBlock(c, mine)}
+    <div class="list-toolbar">
+      <span class="muted-small">${v.filter ? `${plural(shown.length, 'review')} with ${v.filter}★ · <button type="button" class="link-inline" data-action="review-filter" data-n="0">show all</button>` : plural(shown.length, 'written review')}</span>
+      <label class="mini-select"><span class="sr">Sort reviews</span>
+        <select data-select="reviewSort">${REVIEW_SORTS.map((x) => `<option value="${x.id}"${x.id === sort.id ? ' selected' : ''}>${x.label}</option>`).join('')}</select>
+      </label>
+    </div>
+    <ul class="post-list">
+      ${shown.map((r) => reviewItem(r)).join('') || '<li class="muted-small empty-line">No written reviews with this rating yet.</li>'}
+    </ul>`;
+}
+
+function reviewItem(r) {
+  const liked = !!state.liked[r.id];
+  return `
+      <li class="post${r.mine ? ' mine' : ''}">
+        ${avatar(r.name, r.mine ? '#6C4CF1' : null)}
+        <div class="post-body">
+          <div class="post-head"><b>${esc(r.name)}</b><span>${agoText(r.days)}</span></div>
+          ${starsHtml(r.stars, 13)}
+          ${r.text ? `<p>${esc(r.text)}</p>` : ''}
+          ${r.mine ? '' : `<div class="post-actions"><button type="button" class="post-btn${liked ? ' on' : ''}" data-action="like" data-id="${r.id}" aria-pressed="${liked}">${stroke(ICON.thumb, 15)} Helpful · ${r.helpful}</button></div>`}
+        </div>
+      </li>`;
+}
+
+function myReviewBlock(c, mine) {
+  const v = state.view;
+  if (!isEnrolled(c)) {
+    return `
+    <div class="card review-lock">
+      ${stroke(ICON.lock, 20, '#6E6990')}
+      <span><b>Only enrolled learners can rate</b><small>Enroll in ${esc(c.title)} to leave your stars and a review.</small></span>
+      <button type="button" class="btn-secondary small" data-action="enroll">Enroll</button>
+    </div>`;
+  }
+  if (mine && !v.editing) {
+    return `
+    <div class="card my-review">
+      <span class="eyebrow-dark">Your review</span>
+      <ul class="post-list">${reviewItem(mine)}</ul>
+      <div class="row-btns">
+        <button type="button" class="btn-secondary small" data-action="edit-review">Edit</button>
+        <button type="button" class="btn-ghost small" data-action="delete-review">Delete</button>
+      </div>
+    </div>`;
+  }
+  const stars = v.stars || (mine ? mine.stars : 0);
+  const words = ['Tap a star to rate', 'Not for me', 'It’s OK', 'Good', 'Really good', 'Loved it!'];
+  return `
+    <form class="card review-form" data-form="review" onsubmit="return false">
+      <span class="eyebrow-dark">${mine ? 'Edit your review' : 'Rate this course'}</span>
+      <div class="star-pick" role="radiogroup" aria-label="Your rating">
+        ${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="star-btn${n <= stars ? ' on' : ''}" role="radio" aria-checked="${n === stars}" aria-label="${plural(n, 'star')}" data-action="rate-star" data-n="${n}">★</button>`).join('')}
+        <span class="star-word">${words[stars]}</span>
+      </div>
+      <textarea data-draft="review-${c.id}" rows="3" maxlength="600" placeholder="What did you like? What could be better? (optional)">${state.drafts[`review-${c.id}`] != null ? draft(`review-${c.id}`) : mine ? esc(mine.text) : ''}</textarea>
+      <div class="row-btns">
+        ${mine ? '<button type="button" class="btn-ghost small" data-action="cancel-review">Cancel</button>' : ''}
+        <button type="button" class="btn-primary small" data-action="submit-review"${stars ? '' : ' disabled'}>${mine ? 'Save review' : 'Post review'}</button>
+      </div>
+    </form>`;
+}
+
+// ---- discussion
+
+function allComments(c) {
+  const lec = lecturerById(c.lecturer);
+  const withMine = (cm) => [
+    ...(cm.replies || []).map((r) => ({ ...r, name: r.lecturer && lec ? lec.name : r.name, likes: r.likes + (state.liked[r.id] ? 1 : 0) })),
+    ...(state.myReplies[cm.id] || []).map((r) => ({ id: r.id, mine: true, name: 'You', text: r.text, days: daysSince(r.at), likes: state.liked[r.id] ? 1 : 0, at: r.at })),
+  ];
+  const mine = (state.myComments[c.id] || []).map((cm) => ({ id: cm.id, mine: true, name: 'You', text: cm.text, days: daysSince(cm.at), likes: state.liked[cm.id] ? 1 : 0, at: cm.at }));
+  return [...mine, ...comm(c).comments].map((cm) => ({ ...cm, likes: cm.mine ? cm.likes : cm.likes + (state.liked[cm.id] ? 1 : 0), replies: withMine(cm) }));
+}
+
+function discussionPanel(c) {
+  const v = state.view;
+  const list = allComments(c);
+  // Your own new posts stay on top so you can see them; the rest follow the chosen order.
+  const mineFirst = (a, b) => (a.mine === b.mine ? 0 : a.mine ? -1 : 1);
+  const order = v.commentSort === 'newest'
+    ? (a, b) => a.days - b.days || mineFirst(a, b) || (a.at && b.at ? (a.at < b.at ? 1 : -1) : 0)
+    : (a, b) => mineFirst(a, b) || b.likes - a.likes || a.days - b.days;
+  list.sort(order);
+  return `
+    <form class="card comment-form" onsubmit="return false">
+      <textarea data-draft="comment-${c.id}" rows="2" maxlength="600" placeholder="Ask a question or share a tip with other learners">${draft(`comment-${c.id}`)}</textarea>
+      <div class="row-btns"><span class="muted-small">Anyone can join the discussion</span><button type="button" class="btn-primary small" data-action="post-comment">Post</button></div>
+    </form>
+    <div class="list-toolbar">
+      <span class="muted-small">${plural(list.length, 'thread')}</span>
+      <label class="mini-select"><span class="sr">Sort comments</span>
+        <select data-select="commentSort">
+          <option value="top"${v.commentSort === 'top' ? ' selected' : ''}>Top</option>
+          <option value="newest"${v.commentSort === 'newest' ? ' selected' : ''}>Newest</option>
+        </select>
+      </label>
+    </div>
+    <ul class="post-list">${list.map((cm) => commentItem(c, cm)).join('')}</ul>`;
+}
+
+function commentItem(c, cm, isReply = false) {
+  const s = c.subjectInfo;
+  const liked = !!state.liked[cm.id];
+  const replying = !isReply && state.view.replyTo === cm.id;
+  return `
+      <li class="post${cm.mine ? ' mine' : ''}${isReply ? ' reply' : ''}">
+        ${avatar(cm.name, cm.mine ? '#6C4CF1' : cm.lecturer ? s.color : null, isReply)}
+        <div class="post-body">
+          <div class="post-head"><b>${esc(cm.name)}</b>${cm.lecturer ? `<span class="lec-badge" style="background: ${s.tint}; color: ${s.text}">Lecturer</span>` : ''}<span>${agoText(cm.days)}</span></div>
+          <p>${esc(cm.text)}</p>
+          <div class="post-actions">
+            <button type="button" class="post-btn${liked ? ' on' : ''}" data-action="like" data-id="${cm.id}" aria-pressed="${liked}" aria-label="Like${cm.likes ? `, ${cm.likes} likes` : ''}">${stroke(ICON.heart, 15)} ${cm.likes || ''}</button>
+            ${isReply ? '' : `<button type="button" class="post-btn" data-action="reply-open" data-id="${cm.id}" aria-expanded="${replying}">${stroke(ICON.reply, 15)} Reply</button>`}
+            ${cm.mine ? `<button type="button" class="post-btn" data-action="delete-comment" data-id="${cm.id}">Delete</button>` : ''}
+          </div>
+          ${!isReply && (cm.replies.length || replying) ? `<ul class="post-list replies">
+            ${cm.replies.map((r) => commentItem(c, r, true)).join('')}
+            ${replying ? `<li class="reply-form">
+              <textarea data-draft="reply-${cm.id}" rows="2" maxlength="600" placeholder="Reply to ${esc(cm.name)}" data-autofocus>${draft(`reply-${cm.id}`)}</textarea>
+              <div class="row-btns"><button type="button" class="btn-ghost small" data-action="reply-open" data-id="${cm.id}">Cancel</button><button type="button" class="btn-primary small" data-action="post-reply" data-id="${cm.id}">Reply</button></div>
+            </li>` : ''}
+          </ul>` : ''}
+        </div>
+      </li>`;
+}
+
+// ---------------------------------------------------------------- courses (catalog)
+
+const KIND_LABEL = { science: 'Science', language: 'Languages', skills: 'Soft skills', logic: 'Coding', arts: 'Arts' };
+const STATUS_LABEL = { enrolled: 'Enrolled', open: 'Not enrolled', started: 'In progress', completed: 'Completed' };
+const courseStatus = (c) => {
+  const st = [];
+  st.push(isEnrolled(c) ? 'enrolled' : 'open');
+  if (courseComplete(c)) st.push('completed');
+  else if (courseDone(c) > 0) st.push('started');
+  return st;
+};
+
+// Each sort has a default direction; `asc`/`desc` labels say what the toggle means for it.
+const CATALOG_SORTS = [
+  { id: 'rating', label: 'Rating', key: (c) => ratingFor(c).avg, dir: 'desc', desc: 'Highest first', asc: 'Lowest first' },
+  { id: 'reviews', label: 'Number of ratings', key: (c) => ratingFor(c).count, dir: 'desc', desc: 'Most first', asc: 'Fewest first' },
+  { id: 'learners', label: 'Learners', key: learnersFor, dir: 'desc', desc: 'Most first', asc: 'Fewest first' },
+  { id: 'title', label: 'Title', key: (c) => c.title.toLowerCase(), dir: 'asc', desc: 'Z to A', asc: 'A to Z' },
+  { id: 'minutes', label: 'Length', key: courseMinutes, dir: 'asc', desc: 'Longest first', asc: 'Shortest first' },
+  { id: 'lessons', label: 'Lessons', key: (c) => courseLessons(c).length, dir: 'desc', desc: 'Most first', asc: 'Fewest first' },
+  { id: 'progress', label: 'My progress', key: (c) => courseDone(c) / Math.max(1, courseLessons(c).length), dir: 'desc', desc: 'Most done first', asc: 'Least done first' },
+  { id: 'subject', label: 'Subject', key: (c) => c.subject.toLowerCase(), dir: 'asc', desc: 'Z to A', asc: 'A to Z' },
+];
+const sortDef = (id) => CATALOG_SORTS.find((x) => x.id === id);
+const RATING_STEPS = [0, 4.5, 4.6];
+// Filters use the rating as shown (one decimal), so a course showing 4.5 passes "4.5 & up".
+const shownRating = (c) => Math.round(ratingFor(c).avg * 10) / 10;
+
+function catalogFiltered(skip) {
+  const f = state.catalog;
+  const q = f.q.trim().toLowerCase();
+  return courses.filter((c) => {
+    const lec = lecturerById(c.lecturer);
+    if (q && ![c.title, c.blurb, c.subject, c.subjectInfo.topic, lec ? lec.name : ''].some((t) => t.toLowerCase().includes(q))) return false;
+    if (skip !== 'kind' && f.kind.length && !f.kind.includes(c.subjectInfo.kind)) return false;
+    if (skip !== 'audience' && f.audience.length && !f.audience.includes(c.audience || 'adult')) return false;
+    if (skip !== 'lecturer' && f.lecturer.length && !f.lecturer.includes(c.lecturer)) return false;
+    if (skip !== 'status' && f.status.length && !f.status.some((st) => courseStatus(c).includes(st))) return false;
+    if (skip !== 'rating' && f.rating && shownRating(c) < f.rating) return false;
+    return true;
+  });
+}
+
+function catalogSorted(list) {
+  const keys = [...state.catalog.sort.filter((x) => sortDef(x.id)), { id: 'title', dir: 'asc' }];
+  return list.slice().sort((a, b) => {
+    for (const { id, dir } of keys) {
+      const k = sortDef(id).key;
+      const x = k(a);
+      const y = k(b);
+      if (x === y) continue;
+      const r = typeof x === 'string' ? x.localeCompare(y) : x - y;
+      return dir === 'desc' ? -r : r;
+    }
+    return 0;
+  });
+}
+
+const activeFilters = () => {
+  const f = state.catalog;
+  return f.kind.length + f.audience.length + f.lecturer.length + f.status.length + (f.rating ? 1 : 0);
+};
+
+function filterGroup(label, key, options) {
+  const f = state.catalog;
+  // Counts show how many courses you'd see with that option, given the other filters.
+  const base = catalogFiltered(key);
+  return `
+    <div class="filter-group" role="group" aria-label="${label}">
+      <span class="filter-label">${label}</span>
+      <div class="chips">${options.map((o) => {
+        const on = key === 'rating' ? f.rating === o.id : f[key].includes(o.id);
+        const n = key === 'rating' ? base.filter((c) => !o.id || shownRating(c) >= o.id).length : base.filter(o.test).length;
+        return `<button type="button" class="chip-btn${on ? ' on' : ''}" data-action="catalog-filter" data-key="${key}" data-value="${o.id}" aria-pressed="${on}">${o.label}<span class="chip-n">${n}</span></button>`;
+      }).join('')}</div>
+    </div>`;
+}
+
+function catalogCard(c) {
+  const s = c.subjectInfo;
+  const rt = ratingFor(c);
+  const lec = lecturerById(c.lecturer);
+  const total = courseLessons(c).length;
+  const done = courseDone(c);
+  const st = courseStatus(c);
+  const badge = st.includes('completed') ? ['Completed', 'done'] : st.includes('started') ? ['In progress', 'started'] : st.includes('enrolled') ? ['Enrolled', 'enrolled'] : null;
+  return `
+    <li><a class="course-card" href="#course/${c.id}">
+      <span class="cc-icon" style="background: ${s.tint}">${stroke(s.icon, 22, s.color)}</span>
+      <span class="cc-body">
+        <span class="cc-top"><small style="color: ${s.text}">${s.name}${KIND_LABEL[s.kind] && KIND_LABEL[s.kind] !== s.name ? ` · ${KIND_LABEL[s.kind]}` : ''}</small>${badge ? `<span class="cc-badge ${badge[1]}">${badge[0]}</span>` : ''}</span>
+        <b>${c.title}</b>
+        ${lec ? `<span class="cc-lec">with ${esc(lec.name)}</span>` : ''}
+        <span class="cc-rating"><b>${rt.avg.toFixed(1)}</b>${starsHtml(rt.avg, 13)}<span>(${rt.count.toLocaleString('en-US')})</span></span>
+        <span class="cc-meta">${stroke(ICON.people, 14)} ${compact(learnersFor(c))} · ${stroke(ICON.slides, 14)} ${plural(total, 'lesson')} · ${stroke(ICON.clock, 14)} ${courseMinutes(c)} min · ${c.audience === 'kids' ? 'Kids' : 'Adults'}</span>
+        ${done ? `<span class="meter"><span style="width: ${(done / total) * 100}%; background: ${s.color}"></span></span>` : ''}
+      </span>
+    </a></li>`;
+}
+
+function catalogResults() {
+  const list = catalogSorted(catalogFiltered());
+  return `
+    <p class="result-count">${plural(list.length, 'course')}${activeFilters() || state.catalog.q ? ` of ${courses.length}` : ''}</p>
+    ${list.length ? `<ul class="course-list">${list.map(catalogCard).join('')}</ul>` : `
+    <div class="card empty-results">
+      ${ottoFull(90)}
+      <p>No courses match. Try fewer filters.</p>
+      <button type="button" class="btn-secondary small" data-action="catalog-clear">Clear search and filters</button>
+    </div>`}`;
+}
+
+function sortRow(i) {
+  const cur = state.catalog.sort[i];
+  const def = cur && sortDef(cur.id);
+  const used = state.catalog.sort.filter((_, j) => j !== i).map((x) => x.id);
+  const opts = CATALOG_SORTS.filter((x) => !used.includes(x.id));
+  return `
+    <div class="sort-row">
+      <label class="sort-field"><span>${i === 0 ? 'Sort by' : 'Then by'}</span>
+        <select data-sort="${i}">
+          ${i > 0 ? `<option value=""${def ? '' : ' selected'}>Nothing</option>` : ''}
+          ${opts.map((x) => `<option value="${x.id}"${def && def.id === x.id ? ' selected' : ''}>${x.label}</option>`).join('')}
+        </select>
+      </label>
+      ${def ? `<button type="button" class="dir-btn" data-action="catalog-dir" data-i="${i}" aria-label="Order: ${def[cur.dir]}. Tap to reverse">${stroke(cur.dir === 'desc' ? 'M12 5v14M6 13l6 6 6-6' : 'M12 19V5M6 11l6-6 6 6', 16)} ${def[cur.dir]}</button>` : ''}
+    </div>`;
+}
+
+function coursesScreen() {
+  const f = state.catalog;
+  const kinds = [...new Set(courses.map((c) => c.subjectInfo.kind))];
+  const lecIds = [...new Set(courses.map((c) => c.lecturer).filter(Boolean))];
+  const nActive = activeFilters();
+  return `
+<main class="screen catalog">
+  <header class="page-head">
+    <h1>All courses</h1>
+    <p>${plural(courses.length, 'course')} across every arm. Find your next one.</p>
+  </header>
+
+  <label class="search">
+    ${stroke(ICON.search, 20)}
+    <span class="sr">Search courses</span>
+    <input type="search" data-search value="${esc(f.q)}" placeholder="Search courses, topics, lecturers" autocomplete="off">
+  </label>
+
+  <div class="catalog-tools">
+    <button type="button" class="btn-chip${f.open ? ' open' : ''}" data-action="catalog-toggle" aria-expanded="${f.open}">${stroke(ICON.filter, 18)} Filters${nActive ? ` <span class="chip-n on">${nActive}</span>` : ''}</button>
+    ${nActive || f.q ? '<button type="button" class="link-btn" data-action="catalog-clear">Clear all</button>' : ''}
+  </div>
+
+  ${f.open ? `
+  <section class="card filters" aria-label="Filters and sorting">
+    ${filterGroup('Category', 'kind', kinds.map((k) => ({ id: k, label: KIND_LABEL[k] || k, test: (c) => c.subjectInfo.kind === k })))}
+    ${filterGroup('Audience', 'audience', [
+      { id: 'kids', label: 'Kids', test: (c) => c.audience === 'kids' },
+      { id: 'adult', label: 'Adults', test: (c) => (c.audience || 'adult') === 'adult' },
+    ])}
+    ${filterGroup('Lecturer', 'lecturer', lecIds.map((id) => ({ id, label: esc(lecturerById(id)?.name || id), test: (c) => c.lecturer === id })))}
+    ${filterGroup('Rating', 'rating', RATING_STEPS.map((r) => ({ id: r, label: r ? `${r}★ & up` : 'Any' })))}
+    ${filterGroup('My courses', 'status', Object.keys(STATUS_LABEL).map((id) => ({ id, label: STATUS_LABEL[id], test: (c) => courseStatus(c).includes(id) })))}
+    <div class="filter-group sorts" role="group" aria-label="Sorting">
+      <span class="filter-label">Sort</span>
+      ${sortRow(0)}${sortRow(1)}
+    </div>
+  </section>` : `
+  <p class="sort-summary">Sorted by <b>${state.catalog.sort.map((x) => `${sortDef(x.id).label.toLowerCase()} (${sortDef(x.id)[x.dir].toLowerCase()})`).join('</b>, then <b>')}</b></p>`}
+
+  <div class="catalog-results" aria-live="polite">${catalogResults()}</div>
+</main>
+${tabbar('courses')}`;
 }
 
 // ---------------------------------------------------------------- lesson: slides
@@ -1051,6 +1491,7 @@ function render() {
   else if (r.name === 'certificate') html = certificateScreen(courseById(r.id));
   else if (r.name === 'notebook') html = notebookScreen();
   else if (r.name === 'arms') html = armsScreen();
+  else if (r.name === 'courses') html = coursesScreen();
   else html = homeScreen();
 
   app.innerHTML = html;
@@ -1075,7 +1516,8 @@ function render() {
 
 function parseHash() {
   const [name, id, extra] = location.hash.replace(/^#\/?/, '').split('/');
-  if (name === 'course' && courseById(id)) return { name, id };
+  if (name === 'course' && courseById(id)) return extra === 'reviews' || extra === 'discussion' ? { name, id, tab: extra } : { name, id };
+  if (name === 'courses') return { name };
   if (name === 'game' && id && lessonById(id)) return { name, id, game: extra || null };
   if (name === 'lesson' && id && lessonById(id)) {
     const slide = /^\d+$/.test(extra || '') ? Math.min(Number(extra), lessonById(id).slides.length - 1) : null;
@@ -1107,6 +1549,11 @@ function route() {
       state.run = newRun('practice');
     }
   } else if (next.name === 'course') {
+    const prev = state.route;
+    if (prev.name === 'courses') state.courseFrom = 'courses';
+    else if (['home', 'progress', 'arms'].includes(prev.name)) state.courseFrom = 'home';
+    if (prev.name !== 'course' || prev.id !== next.id) state.view = defaultCourseView();
+    if (next.tab) state.view.tab = next.tab;
     state.lastCourse = next.id;
     save();
   }
@@ -1115,7 +1562,17 @@ function route() {
   if (window.speechSynthesis) window.speechSynthesis.cancel();
   render();
   app.querySelector('.screen')?.scrollTo(0, 0);
+  if (next.name === 'course' && next.tab) app.querySelector('#community')?.scrollIntoView({ block: 'start' });
 }
+
+// Re-render without jumping back to the top (for actions deep in a long screen).
+function renderKeep() {
+  const y = app.querySelector('.screen')?.scrollTop || 0;
+  render();
+  const scr = app.querySelector('.screen');
+  if (scr) scr.scrollTop = y;
+}
+const currentCourse = () => (state.route.name === 'course' ? courseById(state.route.id) : null);
 
 // ---------------------------------------------------------------- feedback effects
 
@@ -1387,11 +1844,156 @@ const actions = {
     else showToast('Sharing isn’t available here');
   },
 
+  // community: enrollment, ratings, reviews, discussion
+  enroll() {
+    const c = currentCourse();
+    if (!c || isEnrolled(c)) return;
+    state.enrolled = { ...state.enrolled, [c.id]: today() };
+    save();
+    play('correct');
+    renderKeep();
+    showToast(`Enrolled in ${c.title}`);
+  },
+  'course-tab'(el) {
+    state.view.tab = el.dataset.tab;
+    state.view.replyTo = null;
+    renderKeep();
+    if (el.dataset.jump) app.querySelector('#community')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+  },
+  'review-filter'(el) {
+    const n = Number(el.dataset.n);
+    state.view.filter = state.view.filter === n ? 0 : n;
+    renderKeep();
+  },
+  'rate-star'(el) {
+    state.view.stars = Number(el.dataset.n);
+    play('tap');
+    renderKeep();
+  },
+  'submit-review'() {
+    const c = currentCourse();
+    if (!c || !isEnrolled(c)) return;
+    const prev = state.myReviews[c.id];
+    const stars = state.view.stars || (prev ? prev.stars : 0);
+    if (!stars) return;
+    const key = `review-${c.id}`;
+    const text = (state.drafts[key] != null ? state.drafts[key] : prev ? prev.text : '').trim();
+    state.myReviews = { ...state.myReviews, [c.id]: { stars, text, at: new Date().toISOString() } };
+    delete state.drafts[key];
+    Object.assign(state.view, { stars: 0, editing: false, filter: 0 });
+    save();
+    play('correct');
+    renderKeep();
+    showToast(prev ? 'Review updated' : 'Thanks for your review!');
+  },
+  'edit-review'() {
+    const c = currentCourse();
+    Object.assign(state.view, { editing: true, stars: state.myReviews[c.id].stars });
+    delete state.drafts[`review-${c.id}`];
+    renderKeep();
+  },
+  'cancel-review'() {
+    const c = currentCourse();
+    Object.assign(state.view, { editing: false, stars: 0 });
+    delete state.drafts[`review-${c.id}`];
+    renderKeep();
+  },
+  'delete-review'() {
+    const c = currentCourse();
+    const rest = { ...state.myReviews };
+    delete rest[c.id];
+    state.myReviews = rest;
+    Object.assign(state.view, { editing: false, stars: 0 });
+    save();
+    renderKeep();
+    showToast('Review deleted');
+  },
+  like(el) {
+    const id = el.dataset.id;
+    const liked = { ...state.liked };
+    if (liked[id]) delete liked[id];
+    else { liked[id] = true; play('tap'); }
+    state.liked = liked;
+    save();
+    renderKeep();
+  },
+  'post-comment'() {
+    const c = currentCourse();
+    const key = `comment-${c.id}`;
+    const text = (state.drafts[key] || '').trim();
+    if (!text) { showToast('Write something first'); app.querySelector(`[data-draft="${key}"]`)?.focus(); return; }
+    state.myComments = { ...state.myComments, [c.id]: [{ id: newId(), text, at: new Date().toISOString() }, ...(state.myComments[c.id] || [])] };
+    delete state.drafts[key];
+    save();
+    play('correct');
+    renderKeep();
+    showToast('Posted to the discussion');
+  },
+  'reply-open'(el) {
+    state.view.replyTo = state.view.replyTo === el.dataset.id ? null : el.dataset.id;
+    renderKeep();
+  },
+  'post-reply'(el) {
+    const id = el.dataset.id;
+    const key = `reply-${id}`;
+    const text = (state.drafts[key] || '').trim();
+    if (!text) { showToast('Write a reply first'); return; }
+    state.myReplies = { ...state.myReplies, [id]: [...(state.myReplies[id] || []), { id: newId(), text, at: new Date().toISOString() }] };
+    delete state.drafts[key];
+    state.view.replyTo = null;
+    save();
+    play('correct');
+    renderKeep();
+    showToast('Reply posted');
+  },
+  'delete-comment'(el) {
+    const id = el.dataset.id;
+    const c = currentCourse();
+    state.myComments = { ...state.myComments, [c.id]: (state.myComments[c.id] || []).filter((x) => x.id !== id) };
+    // Your reply, or your comment together with the replies you wrote under it.
+    state.myReplies = Object.fromEntries(Object.entries(state.myReplies)
+      .filter(([parent]) => parent !== id)
+      .map(([parent, list]) => [parent, list.filter((x) => x.id !== id)])
+      .filter(([, list]) => list.length));
+    save();
+    renderKeep();
+    showToast('Deleted');
+  },
+
+  // courses catalog
+  'catalog-toggle'() {
+    state.catalog.open = !state.catalog.open;
+    save();
+    renderKeep();
+  },
+  'catalog-filter'(el) {
+    const f = state.catalog;
+    const { key, value } = el.dataset;
+    if (key === 'rating') f.rating = f.rating === Number(value) ? 0 : Number(value);
+    else f[key] = f[key].includes(value) ? f[key].filter((x) => x !== value) : [...f[key], value];
+    save();
+    play('tap');
+    renderKeep();
+  },
+  'catalog-dir'(el) {
+    const s = state.catalog.sort[Number(el.dataset.i)];
+    s.dir = s.dir === 'desc' ? 'asc' : 'desc';
+    save();
+    renderKeep();
+  },
+  'catalog-clear'() {
+    const { open, sort } = state.catalog;
+    state.catalog = { ...defaultCatalog(), open, sort };
+    save();
+    renderKeep();
+    showToast('Search and filters cleared');
+  },
+
   // misc
   reset() {
     try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
     stopGame();
-    Object.assign(state, defaults(), { run: null, game: null });
+    Object.assign(state, defaults(), { run: null, game: null, view: defaultCourseView(), drafts: {} });
     render();
     showToast('Demo reset');
   },
@@ -1424,6 +2026,37 @@ app.addEventListener('click', (e) => {
   const el = e.target.closest('[data-action]');
   if (!el || el.disabled) return;
   actions[el.dataset.action]?.(el);
+});
+
+// Typing: the catalog search filters as you type (only the results re-render, so the
+// field keeps focus); review and comment boxes keep a draft so re-renders don't lose it.
+let searchSave = null;
+app.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el.matches('[data-search]')) {
+    state.catalog.q = el.value;
+    const box = app.querySelector('.catalog-results');
+    if (box) box.innerHTML = catalogResults();
+    clearTimeout(searchSave);
+    searchSave = setTimeout(save, 400);
+  } else if (el.dataset.draft) state.drafts[el.dataset.draft] = el.value;
+});
+
+// Dropdowns: catalog sort fields, review and comment order.
+app.addEventListener('change', (e) => {
+  const el = e.target;
+  if (el.dataset.sort != null) {
+    const i = Number(el.dataset.sort);
+    const sort = state.catalog.sort.slice(0, 2);
+    if (!el.value) sort.splice(i);
+    else sort[i] = { id: el.value, dir: sortDef(el.value).dir };
+    state.catalog.sort = sort.filter(Boolean);
+    save();
+    renderKeep();
+  } else if (el.dataset.select) {
+    state.view[el.dataset.select] = el.value;
+    renderKeep();
+  }
 });
 
 // Swipe between slides.
@@ -1471,7 +2104,7 @@ route();
 // GitHub Pages lets browsers reuse files for up to 10 minutes, so a phone can keep
 // running an old copy after a release. Compare with version.json (fetched fresh)
 // and reload once when a newer release is out. Bump APP_VERSION with every release.
-const APP_VERSION = '8';
+const APP_VERSION = '9';
 function checkForUpdate() {
   fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : null))
