@@ -94,6 +94,8 @@
   window.Octavo.addCourse({
     id: 'communication',
     subject: 'Communication',
+    audience: 'adult',
+    lecturer: 'mara',
     title: 'Communicate with confidence',
     blurb: 'Make great first impressions, speak up, tell stories and handle tough conversations.',
     artBg: '#F1F9FC',

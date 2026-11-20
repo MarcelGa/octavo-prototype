@@ -205,6 +205,8 @@
   window.Octavo.addCourse({
     id: 'nervous-system',
     subject: 'Medicine',
+    audience: 'adult',
+    lecturer: 'novak',
     title: 'The nervous system',
     blurb: 'How your body sends signals in milliseconds: neurons, nerve impulses, reflexes and the brain.',
     artBg: '#FFF5F5',

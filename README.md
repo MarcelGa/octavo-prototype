@@ -19,14 +19,17 @@ It's plain HTML, CSS and JavaScript with no build step and no dependencies. Prog
 | Chemistry | Atoms and elements | Inside the atom |
 | Music | Reading music | Notes on the staff (with playable notes) |
 | Math | Fractions | Fractions with pizza |
+| Italian | Italian: first steps | Greetings and goodbyes · Introducing yourself · At the café (with spoken Italian) |
 
-Otto has eight arms but there are nine subjects, so one rests at a time (Math, to begin with). Use **Swap arms** on the Home or Profile screen to train a resting subject in place of another; progress in every course is kept.
+Otto has eight arms but there are ten subjects, so two rest at a time (Math and Italian, to begin with). Use **Swap arms** on the Home or Profile screen to train a resting subject in place of another; progress in every course is kept.
 
 Plus **Today's mix**, a quick 3-question quiz across subjects (Practice tab).
 
-**Slide features:** animated illustrations, tap-to-explore hotspots, replayable animations, sliders and simulators (threshold gauge, Ohm's law circuit, F = m × a cart, pizza fractions, atom builder), flip cards, text-to-speech phrases (Spanish and English), a playable piano and a line-by-line Python stepper. Swipe or use the arrow keys to move between slides.
+**Slide features:** animated illustrations, tap-to-explore hotspots, replayable animations, sliders and simulators (threshold gauge, Ohm's law circuit, F = m × a cart, pizza fractions, atom builder), flip cards, text-to-speech phrases (Spanish, Italian and English), a playable piano and a line-by-line Python stepper. Swipe or use the arrow keys to move between slides.
 
 **Quiz:** multiple choice (with pictures, code or audio), true/false and put-in-order questions, with sound effects, confetti, hearts and an "in a row" streak. On a computer, press 1–9 to answer and Enter to continue.
+
+**Bonus games:** finishing a lesson unlocks an optional game built from that lesson's words, facts and steps. Octavo chooses it from three things: who the course is for, the subject, and the lecturer's teaching style. The Spanish course is set up for children, so it gets audio-first games with no timers: Bubble Pop, Memory and Feed Otto. Adult courses get Speed Match, Fact or Fiction, Chain and Memory, with scores and personal bests.
 
 ## Put it on your phone's home screen
 

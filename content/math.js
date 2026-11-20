@@ -60,6 +60,8 @@
   window.Octavo.addCourse({
     id: 'fractions',
     subject: 'Math',
+    audience: 'adult',
+    lecturer: 'kai',
     title: 'Fractions',
     blurb: 'Parts of a whole, explained with pizza: reading, building and comparing fractions.',
     artBg: '#F6F8FF',

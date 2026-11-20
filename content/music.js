@@ -49,6 +49,8 @@
   window.Octavo.addCourse({
     id: 'notes',
     subject: 'Music',
+    audience: 'adult',
+    lecturer: 'mara',
     title: 'Reading music',
     blurb: 'Learn the treble staff, hear every note and train your ear.',
     artBg: '#FFF7FB',

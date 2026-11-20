@@ -55,6 +55,8 @@
   window.Octavo.addCourse({
     id: 'motion',
     subject: 'Physics',
+    audience: 'adult',
+    lecturer: 'novak',
     title: 'Forces and motion',
     blurb: 'Newton’s three laws, from sliding pucks to jet-powered octopuses.',
     artBg: '#FAF5FF',

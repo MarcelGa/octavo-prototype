@@ -99,6 +99,8 @@
   window.Octavo.addCourse({
     id: 'electricity',
     subject: 'Circuits',
+    audience: 'adult',
+    lecturer: 'kai',
     title: 'Electricity basics',
     blurb: 'Voltage, current and resistance, and how real circuits are wired.',
     artBg: '#FFFBF2',

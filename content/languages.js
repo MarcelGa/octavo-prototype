@@ -49,6 +49,8 @@
   window.Octavo.addCourse({
     id: 'spanish',
     subject: 'Languages',
+    audience: 'kids',
+    lecturer: 'lucia',
     title: 'Spanish: first conversations',
     blurb: 'Greet people, introduce yourself and learn your first sea creatures, with audio.',
     artBg: '#FFF8F5',

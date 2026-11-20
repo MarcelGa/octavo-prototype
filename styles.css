@@ -538,3 +538,70 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--violet); outlin
 .arm-row.picked { border-color: var(--violet); background: #F1EDFF; }
 .arm-row.target { border-color: #E4DDFF; border-style: dashed; }
 .swap-hint { margin: 0; font-size: 14px; color: var(--muted); }
+
+/* ---------- Lecturer, weekly goal, notebook, certificates ---------- */
+.lecturer-card { display: flex; gap: 14px; align-items: flex-start; background: #fff; border-radius: 20px; padding: 16px; }
+.avatar { width: 52px; height: 52px; flex: none; border-radius: 999px; color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--font-head); font-weight: 600; font-size: 20px; }
+.lecturer-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.lecturer-text small { font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); }
+.lecturer-text b { font-size: 17px; }
+.lecturer-text > span:not(.style-tag) { font-size: 14px; line-height: 1.4; color: var(--muted); }
+.style-tag { align-self: flex-start; margin-top: 4px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.cert-link { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 8px 12px; border-radius: 999px; background: #fff; font-weight: 800; font-size: 14px; text-decoration: none; }
+
+.dot.missed { background: var(--track); opacity: 0.55; }
+.dot.future { background: transparent; border: 2px dashed var(--line); }
+.goal-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.goal-line { margin: 0; font-size: 14px; color: var(--muted); }
+.goal-line b { color: var(--ink); }
+.goal-pick { display: flex; gap: 6px; }
+.goal-btn { all: unset; box-sizing: border-box; cursor: pointer; min-width: 44px; height: 36px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; background: var(--foam); color: var(--violet-dark); }
+.goal-btn.on { background: var(--violet); color: #fff; }
+.goal-btn:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+.goal-bar { height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.goal-bar span { display: block; height: 100%; background: var(--coral); border-radius: inherit; }
+
+.shelf { gap: 4px; padding: 8px; }
+.shelf-row, .cert-card { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 14px; color: inherit; text-decoration: none; }
+a.shelf-row:hover { background: var(--foam); }
+.shelf-row.muted { opacity: 0.8; }
+.shelf-icon { width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--violet-tint); display: flex; align-items: center; justify-content: center; }
+.shelf-text { flex: 1; display: flex; flex-direction: column; text-align: left; min-width: 0; }
+.shelf-text b { font-size: 15px; }
+.shelf-text span { font-size: 13px; color: var(--muted); }
+.cert-card { width: 100%; background: var(--foam); padding: 12px 14px; border-radius: 18px; }
+
+.note-btn[aria-pressed="true"] { color: var(--violet); }
+.notebook .note-group { display: flex; flex-direction: column; gap: 8px; }
+.note-group h2 { display: flex; align-items: center; gap: 6px; font-size: 17px; }
+.note-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.note-item { display: flex; align-items: flex-start; gap: 4px; background: #fff; border-radius: 16px; padding: 4px 4px 4px 0; }
+.note-item a { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 10px 0 10px 14px; color: inherit; text-decoration: none; }
+.note-item small { font-size: 12px; font-weight: 800; color: var(--muted); }
+.note-item b { font-size: 16px; }
+.note-item span { font-size: 14px; line-height: 1.4; color: var(--muted); }
+.note-empty { align-items: center; text-align: center; }
+.note-empty p { margin: 0; color: var(--muted); line-height: 1.5; }
+.note-empty p svg { vertical-align: -5px; }
+
+.cert-screen { gap: 14px; }
+.certificate {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+  background: #fff; border-radius: 24px; padding: 24px 18px; border: 3px solid var(--c);
+  box-shadow: inset 0 0 0 6px #fff, inset 0 0 0 8px var(--t);
+}
+.cert-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--c); }
+.cert-seal { width: 84px; height: 84px; border-radius: 999px; background: var(--t); display: flex; align-items: center; justify-content: center; }
+.cert-seal svg { width: 70%; height: 70%; }
+.cert-small { margin: 0; font-size: 14px; color: var(--muted); }
+.certificate h1 { font-size: 26px; line-height: 1.15; }
+.cert-subject { margin: 0; font-weight: 800; font-size: 14px; color: var(--muted); }
+.certificate .stats { margin-top: 6px; }
+.certificate .stat { background: var(--foam); }
+.certificate .stat b { font-size: 16px; }
+.cert-sign { display: flex; flex-direction: column; margin-top: 6px; padding-top: 8px; border-top: 2px solid var(--line); min-width: 60%; }
+.cert-sign b { font-family: var(--font-head); font-weight: 600; font-size: 18px; }
+.cert-sign span { font-size: 12px; color: var(--muted); }
+.cert-locked { align-items: center; text-align: center; }
+.cert-locked p { margin: 0; color: var(--muted); }
+button.icon-btn { border: 0; padding: 0; background: none; cursor: pointer; font: inherit; }

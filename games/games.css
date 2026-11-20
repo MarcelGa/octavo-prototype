@@ -1,0 +1,180 @@
+/* Bonus games. Each game screen sets --game-color and --game-tint from its subject.
+   .game.kids switches to bigger, rounder, calmer visuals with no alarm colours. */
+
+/* ---------------------------------------------------------------- bonus card on the lesson-complete screen */
+
+.bonus-card {
+  display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center;
+  width: 100%; padding: 14px 16px; border-radius: 20px; text-align: left; text-decoration: none; color: var(--ink);
+  background: var(--game-tint); border: 2px solid var(--game-color); box-shadow: 0 4px 0 var(--game-color);
+  animation: inkPop 0.5s 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.bonus-card:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.bonus-card:active { transform: translateY(2px); }
+.bonus-icon { grid-row: span 2; width: 46px; height: 46px; border-radius: 14px; background: #fff; display: grid; place-items: center; }
+.bonus-icon svg { animation: bob 2.4s ease-in-out infinite; }
+.bonus-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.bonus-text small { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.bonus-text b { font-family: var(--font-head); font-weight: 600; font-size: 19px; }
+.bonus-text span { font-size: 14px; color: var(--muted); }
+.bonus-ink { grid-column: 2; display: inline-flex; align-items: center; gap: 4px; font-weight: 800; font-size: 13px; color: var(--violet-dark); }
+.bonus-card.kids { border-radius: 28px; }
+
+/* "Play again" is a button styled like the ghost links next to it. */
+button.btn-ghost { background: none; border: 0; font-family: inherit; cursor: pointer; }
+button.btn-ghost:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; border-radius: 12px; }
+
+/* ---------------------------------------------------------------- game screen frame */
+
+.game { gap: 14px; background: #fff; }
+.game .tag { align-self: flex-start; }
+.game-name { flex: 1; min-width: 0; font-family: var(--font-head); font-weight: 600; font-size: 19px; line-height: 1.1; }
+.game-hud { display: flex; gap: 8px; align-items: center; }
+.game-root { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+.g-count, .g-timer, .g-mult { font-weight: 800; font-size: 14px; padding: 4px 10px; border-radius: 999px; background: var(--foam); white-space: nowrap; }
+.g-timer { background: var(--violet-tint); color: var(--violet-dark); font-variant-numeric: tabular-nums; }
+.g-timer.low { background: var(--red-tint); color: var(--red-dark); animation: pick 1s ease-in-out infinite; }
+.g-mult { background: #FFF1E0; color: #A34A00; }
+.g-dots { display: flex; gap: 6px; }
+.g-dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--track); }
+.g-dots i.on { background: var(--game-color); }
+.g-dots i.now { background: #fff; box-shadow: inset 0 0 0 3px var(--game-color); }
+.g-ask { margin: 0; color: var(--muted); font-weight: 700; font-size: 16px; text-align: center; }
+.game button { font-family: inherit; cursor: pointer; }
+
+/* Yes / no button pair, shared by Feed Otto and Fact or Fiction. */
+.g-yesno { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.g-yesno button {
+  min-height: 60px; border-radius: 18px; border: 0; font-size: 19px; font-weight: 800; color: #fff;
+  transition: transform 0.12s, opacity 0.2s;
+}
+.g-yes { background: var(--green); box-shadow: 0 4px 0 var(--green-dark); }
+.g-no { background: var(--red); box-shadow: 0 4px 0 var(--red-dark); }
+.g-yesno button:active:not(:disabled) { transform: translateY(2px); }
+.g-yesno button:disabled { opacity: 0.45; cursor: default; }
+.g-yesno button.ok, .g-yesno button.bad { opacity: 1; }
+.g-yesno button.ok { animation: bounce 0.5s ease-out; }
+.g-yesno button.bad { animation: shake 0.42s ease-in-out; }
+.g-yesno button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+/* ---------------------------------------------------------------- Bubble Pop */
+
+.g-prompt { display: flex; align-items: center; gap: 16px; background: var(--game-tint); border-radius: 28px; padding: 16px; }
+.g-prompt p { margin: 0; display: flex; flex-direction: column; }
+.g-prompt b { font-family: var(--font-head); font-weight: 600; font-size: 26px; }
+.g-prompt small { color: var(--muted); font-size: 15px; font-weight: 700; }
+.g-listen {
+  flex: none; width: 72px; height: 72px; border-radius: 50%; border: 0; color: #fff;
+  background: var(--game-color); box-shadow: 0 5px 0 rgba(30, 26, 60, 0.25); display: grid; place-items: center;
+  animation: pick 1.6s ease-in-out infinite;
+}
+.g-bubbles { flex: 1; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 18px; padding: 8px 0; }
+.g-bubble {
+  width: 132px; height: 132px; border-radius: 50%; padding: 12px; border: 3px solid rgba(255, 255, 255, 0.9);
+  font-size: 18px; font-weight: 800; color: var(--ink); line-height: 1.2;
+  background: radial-gradient(circle at 32% 28%, #fff 0 14%, transparent 15%), radial-gradient(circle at 50% 50%, #E8F6FF, #B9E2FA);
+  box-shadow: inset -6px -8px 0 rgba(108, 76, 241, 0.12), 0 6px 14px rgba(30, 26, 60, 0.12);
+  animation: bob 3s ease-in-out infinite;
+}
+.g-bubble:nth-child(2) { background: radial-gradient(circle at 32% 28%, #fff 0 14%, transparent 15%), radial-gradient(circle at 50% 50%, #FFF1EC, #FFD2C4); }
+.g-bubble:nth-child(3) { background: radial-gradient(circle at 32% 28%, #fff 0 14%, transparent 15%), radial-gradient(circle at 50% 50%, #F1EDFF, #D6CCFF); }
+.g-bubble:focus-visible { outline: 4px solid var(--violet); outline-offset: 3px; }
+.g-bubble.wobble { animation: shake 0.5s ease-in-out; }
+.g-bubble.popped { animation: popBubble 0.5s ease-out forwards; }
+.g-bubble:disabled:not(.popped) { opacity: 0.4; }
+@keyframes popBubble { 40% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+
+/* ---------------------------------------------------------------- Otto's Memory */
+
+.g-memory { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.g-card { height: 96px; border: 0; padding: 0; background: none; perspective: 700px; }
+.g-card-inner { position: relative; display: block; width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; }
+.g-card.up .g-card-inner { transform: rotateY(180deg); }
+.g-card-back, .g-card-face {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 8px; border-radius: 22px;
+  backface-visibility: hidden; font-weight: 800;
+}
+.g-card-back { background: var(--game-color); color: #fff; font-family: var(--font-head); font-size: 36px; box-shadow: 0 4px 0 rgba(30, 26, 60, 0.25); }
+.g-card-face { background: var(--game-tint); color: var(--ink); font-size: 17px; line-height: 1.2; transform: rotateY(180deg); border: 3px solid var(--game-color); }
+.g-card.matched .g-card-face { background: var(--green-tint); border-color: var(--green); animation: bounce 0.5s ease-out; }
+.g-card:focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; border-radius: 22px; }
+
+/* ---------------------------------------------------------------- Feed Otto */
+
+.g-feed { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 14px; justify-content: center; }
+.g-otto svg { width: 130px; height: 120px; }
+.g-otto .g-otto-body { animation: bob 3s ease-in-out infinite; transform-box: fill-box; }
+.g-otto.happy .g-mouth { ry: 10; }
+.g-otto.happy { animation: bounce 0.6s ease-out; }
+.g-otto.think { animation: shake 0.6s ease-in-out; }
+.g-snack {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
+  background: var(--game-tint); border-radius: 26px; padding: 16px 20px; font-size: 20px; text-align: center; width: 100%;
+}
+.g-snack b { font-family: var(--font-head); font-weight: 600; font-size: 24px; }
+.g-feed .g-yesno { width: 100%; }
+.g-note { margin: 0; min-height: 24px; font-size: 17px; text-align: center; }
+
+/* ---------------------------------------------------------------- Speed Match */
+
+.g-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.g-col { display: flex; flex-direction: column; gap: 10px; }
+.g-tile {
+  min-height: 64px; padding: 8px 10px; border-radius: 14px; border: 2px solid var(--line); background: #fff;
+  font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.25; box-shadow: 0 3px 0 var(--line);
+  transition: opacity 0.25s, transform 0.12s;
+}
+.g-tile.term { font-weight: 800; background: var(--foam); }
+.g-tile.sel { border-color: var(--violet); background: var(--violet-tint); box-shadow: 0 3px 0 var(--violet); }
+.g-tile.ok { border-color: var(--green); background: var(--green-tint); opacity: 0.55; box-shadow: none; }
+.g-tile.bad { animation: shake 0.42s ease-in-out; border-color: var(--red); }
+.g-tile:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------- Fact or Fiction */
+
+.g-claim {
+  flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 10px; min-height: 180px;
+  padding: 22px; border-radius: 24px; background: var(--game-tint); border: 2px solid var(--game-color);
+}
+.g-claim p { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.35; }
+.g-claim-answer { font-family: var(--font-head); font-weight: 600; color: var(--ink); font-size: 22px !important; }
+.g-explain { display: flex; flex-direction: column; gap: 10px; }
+.g-explain:empty { display: none; }
+.g-explain p { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--red-tint); font-size: 15px; line-height: 1.4; }
+
+/* ---------------------------------------------------------------- Chain */
+
+.g-chain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.g-link {
+  display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 10px; border-radius: 14px;
+  background: var(--foam); border: 2px solid var(--line); transition: background 0.2s, border-color 0.2s;
+}
+.g-link.ok { background: var(--green-tint); border-color: var(--green); }
+.g-link-n { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #fff; font-weight: 800; font-size: 13px; }
+.g-link-t { flex: 1; font-weight: 700; font-size: 15px; line-height: 1.3; }
+.g-link-btns { display: flex; gap: 4px; }
+.g-link-btns button { width: 38px; height: 38px; border-radius: 10px; border: 0; background: #fff; color: var(--violet-dark); font-size: 13px; box-shadow: 0 2px 0 var(--line); }
+.g-link-btns button:disabled { opacity: 0.3; cursor: default; }
+.g-link-btns button:focus-visible { outline: 3px solid var(--violet); outline-offset: 1px; }
+.g-chain.done .g-link { animation: bounce 0.5s ease-out; }
+
+/* ---------------------------------------------------------------- kids variant */
+
+.game.kids { background: linear-gradient(#FFFDF7, #F3FBFF); }
+.game.kids .game-name { font-size: 22px; }
+/* No alarm red for children: "no" is just the other friendly choice. */
+.game.kids .g-no { background: var(--violet); box-shadow: 0 4px 0 var(--violet-dark); }
+.game.kids .g-yesno button { min-height: 76px; font-size: 22px; border-radius: 26px; }
+.game.kids .g-card { height: 112px; }
+.game.kids .g-card-face { font-size: 19px; }
+.kids-finish h1 { color: var(--violet-dark); }
+.stars { display: flex; gap: 6px; font-size: 48px; line-height: 1; }
+.stars span { color: var(--track); }
+.stars span.on { color: #F5A524; animation: badgePop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+.stars span:nth-child(2) { animation-delay: 0.15s; }
+.stars span:nth-child(3) { animation-delay: 0.3s; }
+.stats.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bonus-icon svg, .g-bubble, .g-listen, .g-otto .g-otto-body, .g-timer.low { animation: none; }
+}

@@ -1,14 +1,23 @@
 'use strict';
 
-/* Shared helpers and the course registry. Content files (content/*.js) call
-   Octavo.addCourse(...) and app.js reads Octavo.courses. */
+/* Shared helpers and the registries. Content files (content/*.js) call
+   Octavo.addCourse(...) and Octavo.addLecturer(...); game files (games/*.js) call
+   Octavo.addGame(...). app.js reads all three lists. */
 
 window.Octavo = (() => {
   const courses = [];
+  const lecturers = [];
+  const games = [];
   let audioCtx = null;
 
   function addCourse(course) {
     courses.push(course);
+  }
+  function addLecturer(lecturer) {
+    lecturers.push(lecturer);
+  }
+  function addGame(game) {
+    games.push(game);
   }
 
   // Text-to-speech for language lessons. Returns false when the device can't speak.
@@ -75,5 +84,5 @@ window.Octavo = (() => {
     return s ? tone(s.seq, s) : false;
   }
 
-  return { courses, addCourse, speak, tone, sfx, NOTE };
+  return { courses, lecturers, games, addCourse, addLecturer, addGame, speak, tone, sfx, NOTE };
 })();

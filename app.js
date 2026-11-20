@@ -4,24 +4,28 @@
    Routes (hash based, so the back button works):
      #home              home screen
      #course/<id>       a subject's curriculum
-     #lesson/<id>       interactive slides, then a quiz on them
-     #practice          "Today's mix" quick quiz
-     #progress          the "nine brains" profile screen */
+     #lesson/<id>[/<n>] interactive slides (optionally from slide n), then a quiz on them
+     #practice          "Today's mix" / "Review my mistakes" quick quiz
+     #progress          the "nine brains" profile screen
+     #notebook          slides the learner saved
+     #certificate/<id>  a finished course's certificate
+     #game/<id>[/<g>]   the bonus game for a lesson (games/*.js), optionally a specific one */
 
-const { courses, speak, tone, sfx, NOTE } = window.Octavo;
+const { courses, lecturers, speak, tone, sfx, NOTE, rankGames, mountGame, stopGame } = window.Octavo;
 
 // ---------------------------------------------------------------- subjects
 
 const SUBJECTS = [
-  { name: 'Languages', topic: 'Spanish',   level: 7, color: '#E8613F', tint: '#FFE9E2', text: '#9A3A1F', icon: 'M4 5h16v10H9l-5 4z' },
-  { name: 'Medicine',  topic: 'Nervous system', level: 3, color: '#E5484D', tint: '#FDE7E8', text: '#9B2226', icon: 'M3 12h4l2-5 4 10 2-5h6' },
-  { name: 'Communication', topic: 'Soft skills', level: 1, color: '#0090C1', tint: '#E1F3FA', text: '#00668A', icon: 'M9 11a3 3 0 1 0 0-6a3 3 0 0 0 0 6M3 20c.7-3.5 3-5 6-5s5.3 1.5 6 5M16 8a4 4 0 0 1 0 6M19 5a8 8 0 0 1 0 12' },
-  { name: 'Physics',   topic: 'Motion',    level: 4, color: '#8E4EC6', tint: '#F1E8FA', text: '#6A2E9E', icon: 'M12 9a3 3 0 1 0 0.01 0M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8' },
-  { name: 'Circuits',  topic: "Ohm's law", level: 5, color: '#D18A00', tint: '#FEF3DD', text: '#7A5000', icon: 'M13 3L5 14h6l-1 7 8-11h-6z' },
-  { name: 'Code',      topic: 'Python',    level: 6, color: '#12A594', tint: '#DDF5F1', text: '#0B6B60', icon: 'M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14' },
-  { name: 'Chemistry', topic: 'Atoms',     level: 2, color: '#30A46C', tint: '#E0F4E8', text: '#1C6B45', icon: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3' },
-  { name: 'Music',     topic: 'Notes',     level: 1, color: '#D6409F', tint: '#FBE6F3', text: '#962A6E', icon: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 1 1 6 0M20 16a3 3 0 1 1-6 0a3 3 0 1 1 6 0' },
-  { name: 'Math',      topic: 'Fractions', level: 9, color: '#3E63DD', tint: '#E6ECFC', text: '#2A44A8', icon: 'M17 5H7l6 7-6 7h10' },
+  { name: 'Languages', topic: 'Spanish',   level: 7, kind: 'language', color: '#E8613F', tint: '#FFE9E2', text: '#9A3A1F', icon: 'M4 5h16v10H9l-5 4z' },
+  { name: 'Medicine',  topic: 'Nervous system', level: 3, kind: 'science', color: '#E5484D', tint: '#FDE7E8', text: '#9B2226', icon: 'M3 12h4l2-5 4 10 2-5h6' },
+  { name: 'Communication', topic: 'Soft skills', level: 1, kind: 'skills', color: '#0090C1', tint: '#E1F3FA', text: '#00668A', icon: 'M9 11a3 3 0 1 0 0-6a3 3 0 0 0 0 6M3 20c.7-3.5 3-5 6-5s5.3 1.5 6 5M16 8a4 4 0 0 1 0 6M19 5a8 8 0 0 1 0 12' },
+  { name: 'Physics',   topic: 'Motion',    level: 4, kind: 'science', color: '#8E4EC6', tint: '#F1E8FA', text: '#6A2E9E', icon: 'M12 9a3 3 0 1 0 0.01 0M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8' },
+  { name: 'Circuits',  topic: "Ohm's law", level: 5, kind: 'science', color: '#D18A00', tint: '#FEF3DD', text: '#7A5000', icon: 'M13 3L5 14h6l-1 7 8-11h-6z' },
+  { name: 'Code',      topic: 'Python',    level: 6, kind: 'logic', color: '#12A594', tint: '#DDF5F1', text: '#0B6B60', icon: 'M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14' },
+  { name: 'Chemistry', topic: 'Atoms',     level: 2, kind: 'science', color: '#30A46C', tint: '#E0F4E8', text: '#1C6B45', icon: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3' },
+  { name: 'Music',     topic: 'Notes',     level: 1, kind: 'arts', color: '#D6409F', tint: '#FBE6F3', text: '#962A6E', icon: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 1 1 6 0M20 16a3 3 0 1 1-6 0a3 3 0 1 1 6 0' },
+  { name: 'Math',      topic: 'Fractions', level: 9, kind: 'science', color: '#3E63DD', tint: '#E6ECFC', text: '#2A44A8', icon: 'M17 5H7l6 7-6 7h10' },
+  { name: 'Italian',   topic: 'First words', level: 1, kind: 'language', color: '#6E8B1E', tint: '#EEF4DC', text: '#4A5E12', icon: 'M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3v3M12 3v3' },
 ];
 const subject = (name) => SUBJECTS.find((s) => s.name === name);
 
@@ -50,6 +54,20 @@ const courseLessons = (c) => c.units.flatMap((u) => u.lessons);
 const nextLessonIn = (c) => courseLessons(c).find((l) => !state.completed[l.id]) || null;
 const nextAfter = (l) => { const ls = courseLessons(l.course); return ls[ls.indexOf(l) + 1] || null; };
 const courseDone = (c) => courseLessons(c).filter((l) => state.completed[l.id]).length;
+
+// ---------------------------------------------------------------- bonus games
+// The engine (games/engine.js) picks from the course's audience, the subject's kind
+// and the lecturer's style. Games only ever see items extracted from the lesson.
+
+const lecturerById = (id) => lecturers.find((x) => x.id === id) || null;
+const gamesFor = (l) => rankGames(l, {
+  audience: l.course.audience || 'adult',
+  kind: l.course.subjectInfo.kind,
+  lecturer: lecturerById(l.course.lecturer),
+  lastGame: state.lastGame,
+});
+const isKids = (l) => l.course.audience === 'kids';
+const inkFor = (l, result) => (isKids(l) ? 10 : Math.round(5 + 15 * Math.min(1, result.score / Math.max(1, result.max))));
 
 // ---------------------------------------------------------------- practice quiz ("Today's mix")
 
@@ -119,6 +137,10 @@ const ICON = {
   slides: 'M4 5h16v11H4zM9 20h6M12 16v4',
   swap: 'M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7',
   music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 1 1 6 0M20 16a3 3 0 1 1-6 0a3 3 0 1 1 6 0',
+  medal: 'M8 3l2 6M16 3l-2 6M12 21a6 6 0 1 0 0-12a6 6 0 0 0 0 12M12 13v4M10.5 14l1.5-1',
+  bookmark: 'M6 4h12v16l-6-4-6 4z',
+  note: 'M5 4h11l3 3v13H5zM8 10h8M8 14h8M8 18h5',
+  game: 'M6 9h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 14H9l-1.6 1.8A3 3 0 0 1 2 14v-1a4 4 0 0 1 4-4zM8 11v3M6.5 12.5h3M15.5 12h.01M18 13.5h.01',
 };
 const stroke = (d, size = 24, color = 'currentColor', width = 2.2) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
@@ -131,19 +153,47 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 // ---------------------------------------------------------------- state
 
 const STORE_KEY = 'octavo-prototype-v2';
-const defaults = () => ({ ink: 340, streak: 12, lessons: 38, doneToday: false, completed: {}, lastCourse: 'nervous-system', sound: true, arms: [...DEFAULT_ARMS] });
+// Dates are local calendar days as 'YYYY-MM-DD'.
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return ymd(d); };
+const today = () => daysAgo(0);
+// A made-up history of the last n days (not today), so a fresh demo starts mid-streak.
+const seedDays = (n) => Array.from({ length: n }, (_, i) => daysAgo(n - i));
+// Monday to Sunday of the current week.
+const weekDays = () => { const offset = (new Date().getDay() + 6) % 7; return [...Array(7).keys()].map((i) => daysAgo(offset - i)); };
+
+// misses: { 'lessonId#questionIndex': times missed } feeds "Review my mistakes".
+// days: the days something was learned, for the streak and the weekly goal.
+// notes: slides saved to the notebook, [{ lessonId, slide, at }].
+const SAVED_FIELDS = ['ink', 'lessons', 'completed', 'lastCourse', 'sound', 'arms', 'games', 'lastGame', 'misses', 'days', 'weeklyGoal', 'notes'];
+const defaults = () => ({ ink: 340, lessons: 38, completed: {}, lastCourse: 'nervous-system', sound: true, arms: [...DEFAULT_ARMS], games: {}, lastGame: null, misses: {}, days: seedDays(12), weeklyGoal: 5, notes: [] });
 
 function loadSaved() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
+  // Saves from before real dates only had a streak number: rebuild a matching history.
+  if (!Array.isArray(saved.days) && 'streak' in saved) saved.days = seedDays(Number(saved.streak) || 0);
+  delete saved.streak;
+  delete saved.doneToday;
+  return saved;
 }
 function save() {
   try {
-    const { ink, streak, lessons, doneToday, completed, lastCourse, sound, arms } = state;
-    localStorage.setItem(STORE_KEY, JSON.stringify({ ink, streak, lessons, doneToday, completed, lastCourse, sound, arms }));
+    localStorage.setItem(STORE_KEY, JSON.stringify(Object.fromEntries(SAVED_FIELDS.map((k) => [k, state[k]]))));
   } catch { /* storage blocked: the demo still works, it just won't remember */ }
 }
 
-const state = { route: { name: 'home' }, ...defaults(), ...loadSaved(), run: null, swapIn: null };
+const doneToday = () => state.days.includes(today());
+function streakNow() {
+  const days = new Set(state.days);
+  let i = days.has(today()) ? 0 : 1; // the streak survives until today ends
+  let n = 0;
+  while (days.has(daysAgo(i))) { n += 1; i += 1; }
+  return n;
+}
+const qKey = (lessonId, i) => `${lessonId}#${i}`;
+
+const state = { route: { name: 'home' }, ...defaults(), ...loadSaved(), run: null, game: null, swapIn: null };
 state.arms = validArms(state.arms);
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -156,10 +206,57 @@ function shuffled(n) {
   return idx;
 }
 
+// ---------------------------------------------------------------- practice ("Review my mistakes")
+// Questions come from lessons in the current arms: the ones missed most come first,
+// then a mix from different subjects. Before any lesson is done, the starter set is used.
+
+const PRACTICE_SIZE = 5;
+const inArms = (l) => state.arms.includes(l.course.subject);
+const missedKeys = () => Object.keys(state.misses).filter((k) => {
+  const l = lessonById(k.split('#')[0]);
+  return l && inArms(l) && l.quiz[Number(k.split('#')[1])];
+});
+
+function buildPractice() {
+  const pool = ALL_LESSONS
+    .filter((l) => inArms(l) && state.completed[l.id])
+    .flatMap((l) => l.quiz.map((q, i) => ({ q, lesson: l, i, key: qKey(l.id, i) })));
+  for (const k of missedKeys()) {
+    if (pool.some((p) => p.key === k)) continue;
+    const l = lessonById(k.split('#')[0]);
+    const i = Number(k.split('#')[1]);
+    pool.push({ q: l.quiz[i], lesson: l, i, key: k });
+  }
+  if (!pool.length) return { questions: PRACTICE, refs: null, reviewing: 0 };
+
+  const missed = pool.filter((p) => state.misses[p.key]).sort((a, b) => state.misses[b.key] - state.misses[a.key]);
+  const picked = missed.slice(0, PRACTICE_SIZE);
+  const rest = pool.filter((p) => !state.misses[p.key]);
+  const order = shuffled(rest.length).map((i) => rest[i]);
+  // Prefer subjects not in the set yet, so the mix spans several arms.
+  const used = new Set(picked.map((p) => p.lesson.course.subject));
+  for (const fresh of [true, false]) {
+    for (const p of order) {
+      if (picked.length >= PRACTICE_SIZE) break;
+      if (picked.includes(p) || (fresh && used.has(p.lesson.course.subject))) continue;
+      picked.push(p);
+      used.add(p.lesson.course.subject);
+    }
+  }
+  return {
+    questions: picked.map((p) => ({ ...p.q, subject: p.lesson.course.subject, from: p.lesson.title, review: !!state.misses[p.key] })),
+    refs: picked.map((p) => ({ lessonId: p.lesson.id, i: p.i })),
+    reviewing: Math.min(missed.length, PRACTICE_SIZE),
+  };
+}
+
 function newRun(kind, lesson) {
+  const practice = kind === 'lesson' ? null : buildPractice();
   const run = {
     kind, lesson, phase: kind === 'lesson' ? 'slides' : 'quiz', slide: 0, dir: '',
-    questions: kind === 'lesson' ? lesson.quiz : PRACTICE,
+    questions: practice ? practice.questions : lesson.quiz,
+    refs: practice ? practice.refs : lesson.quiz.map((_, i) => ({ lessonId: lesson.id, i })),
+    reviewing: practice ? practice.reviewing : 0, fixed: 0,
     q: 0, hearts: 5, earned: 0, firstTryCount: 0, combo: 0, bestCombo: 0,
   };
   startQuestion(run);
@@ -197,6 +294,14 @@ const lessonMeta = (l) => `${plural(l.slides.length, 'slide')} · ${plural(l.qui
 
 // ---------------------------------------------------------------- home
 
+function mixText() {
+  const n = missedKeys().length;
+  if (n) return `<b>Review my mistakes</b><span>${plural(n, 'question')} to fix, mixed with ones from your arms</span>`;
+  const pool = ALL_LESSONS.filter((l) => inArms(l) && state.completed[l.id]).reduce((a, l) => a + l.quiz.length, 0);
+  if (pool) return `<b>Today's mix</b><span>${plural(Math.min(pool, PRACTICE_SIZE), 'quick question')} from lessons you've done</span>`;
+  return "<b>Today's mix</b><span>3 quick questions from 3 different arms</span>";
+}
+
 function homeScreen() {
   const trained = armSubjects().map((sub) => courseFor(sub.name));
   const last = courseById(state.lastCourse);
@@ -232,21 +337,21 @@ function homeScreen() {
   <header class="topbar">
     <div class="wordmark" aria-label="Octavo">octav<span>o</span></div>
     <div class="pills">
-      <span class="pill">${FLAME()}${state.streak}<span class="sr"> day streak</span></span>
+      <span class="pill">${FLAME()}${streakNow()}<span class="sr"> day streak</span></span>
       <span class="pill">${DROP()}${state.ink}<span class="sr"> ink drops</span></span>
     </div>
   </header>
 
   <div class="greet">
     ${ottoFull(76)}
-    <p class="bubble">${state.doneToday ? 'Great work today! Fancy another round?' : 'Nine brains, zero limits. Which arm are we training today?'}</p>
+    <p class="bubble">${doneToday() ?'Great work today! Fancy another round?' : 'Nine brains, zero limits. Which arm are we training today?'}</p>
   </div>
 
   ${continueCard}
 
   <a class="mix-card" href="#practice">
     <span class="mix-icon" style="background: ${s.tint}">${stroke(ICON.target, 22, '#6C4CF1')}</span>
-    <span class="mix-text"><b>Today's mix</b><span>3 quick questions from 3 different arms</span></span>
+    <span class="mix-text">${mixText()}</span>
     ${stroke('M9 6l6 6-6 6', 20, '#4A4566')}
   </a>
 
@@ -278,6 +383,23 @@ ${tabbar('home')}`;
 
 // ---------------------------------------------------------------- course (curriculum)
 
+const STYLE_LABEL = { playful: 'Playful', competitive: 'Loves a challenge', calm: 'Calm, unhurried', academic: 'Academic' };
+const initials = (name) => name.replace(/^Dr\.?\s+/, '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2);
+
+function lecturerCard(lec, s) {
+  if (!lec) return '';
+  return `
+  <section class="lecturer-card" aria-label="Your lecturer">
+    <span class="avatar" style="background: ${s.color}" aria-hidden="true">${esc(initials(lec.name))}</span>
+    <span class="lecturer-text">
+      <small>Your lecturer</small>
+      <b>${esc(lec.name)}</b>
+      <span>${esc(lec.bio)}</span>
+      ${STYLE_LABEL[lec.style] ? `<span class="style-tag" style="background: ${s.tint}; color: ${s.text}">${STYLE_LABEL[lec.style]}</span>` : ''}
+    </span>
+  </section>`;
+}
+
 function courseScreen(c) {
   const s = c.subjectInfo;
   const total = courseLessons(c).length;
@@ -296,7 +418,10 @@ function courseScreen(c) {
     <h1>${c.title}</h1>
     <p>${c.blurb}</p>
     <div class="hero-bar"><div class="meter"><span style="width: ${(done / total) * 100}%; background: ${s.color}"></span></div><span>${done}/${total} lessons</span></div>
+    ${courseComplete(c) ? `<a class="cert-link" href="#certificate/${c.id}" style="color: ${s.text}">${stroke(ICON.medal, 18, s.color)} View your certificate</a>` : ''}
   </section>
+
+  ${lecturerCard(lecturerById(c.lecturer), s)}
 
   ${c.units.map((u, ui) => `
   <section class="unit">
@@ -372,8 +497,8 @@ function slideScreen(run) {
       <span><b lang="${(p.lang || 'es-ES').slice(0, 2)}">${p.es}</b><small>${p.en}</small></span></li>`).join('')}</ul>` : '';
 
   const cards = sl.cards ? `<div class="flip-grid">${sl.cards.map((cd) => `
-    <button type="button" class="flip" data-action="flip" data-say="${esc(cd.front)}" aria-pressed="false" aria-label="${esc(cd.front)}: tap to reveal">
-      <span class="flip-inner"><span class="flip-front" lang="es">${cd.front}</span><span class="flip-back">${cd.back}</span></span>
+    <button type="button" class="flip" data-action="flip" data-say="${esc(cd.front)}" data-lang="${cd.lang || 'es-ES'}" aria-pressed="false" aria-label="${esc(cd.front)}: tap to reveal">
+      <span class="flip-inner"><span class="flip-front" lang="${(cd.lang || 'es-ES').slice(0, 2)}">${cd.front}</span><span class="flip-back">${cd.back}</span></span>
     </button>`).join('')}</div>` : '';
 
   const code = sl.code ? `
@@ -398,6 +523,7 @@ function slideScreen(run) {
     <a class="icon-btn" href="#course/${c.id}" aria-label="Close lesson">${stroke(ICON.close, 22, 'currentColor', 2.6)}</a>
     ${segments(run)}
     <span class="counter">${run.slide + 1}/${l.slides.length}</span>
+    <button type="button" class="icon-btn note-btn" data-action="note" aria-pressed="${isNoted(l.id, run.slide)}" aria-label="Save slide to notebook">${bookmarkIcon(isNoted(l.id, run.slide))}</button>
   </header>
   <div class="slide-stage">
     <article class="slide ${run.dir}" aria-roledescription="slide" aria-label="${run.slide + 1} of ${l.slides.length}">
@@ -438,7 +564,7 @@ function quizScreen(run) {
   const solved = run.checked && isCorrect(q, run);
   const pct = Math.round(((run.q + (solved ? 1 : 0)) / run.questions.length) * 100);
   const closeHref = run.kind === 'lesson' ? `#course/${run.lesson.course.id}` : '#home';
-  const tagText = run.kind === 'lesson' ? `Quiz · ${run.lesson.title}` : `${s.name} · ${s.topic}`;
+  const tagText = run.kind === 'lesson' ? `Quiz · ${run.lesson.title}` : `${q.review ? 'Review · ' : ''}${s.name} · ${q.from || s.topic}`;
 
   let media = '';
   if (q.art) media += `<figure class="figure">${q.art}</figure>`;
@@ -511,14 +637,19 @@ function quizFooter(run, q) {
 function doneScreen(run) {
   const total = run.questions.length;
   if (run.kind === 'practice') {
+    const arms = new Set(run.questions.map((q) => q.subject)).size;
+    const left = missedKeys().length;
+    const line = run.fixed
+      ? `You fixed ${plural(run.fixed, 'mistake')}${left ? `, ${left} still to review` : ' — nothing left to review'}.`
+      : run.reviewing ? `Still shaky on some — they'll come back next time.` : `You trained ${plural(arms, 'arm')} today.`;
     return `
 <main class="screen finish">
   ${ottoFull(170)}
-  <h1>Mix complete!</h1>
-  <p>You trained three arms today.</p>
+  <h1>${run.reviewing ? 'Review complete!' : 'Mix complete!'}</h1>
+  <p>${line}</p>
   <div class="stats">
     <div class="stat"><b>+${run.earned}</b><span>ink drops</span></div>
-    <div class="stat"><b>${state.streak}</b><span>day streak</span></div>
+    <div class="stat"><b>${streakNow()}</b><span>day streak</span></div>
     <div class="stat"><b>${run.hearts}</b><span>hearts left</span></div>
   </div>
   <a class="btn-primary" href="#progress" data-autofocus>See my nine brains</a>
@@ -528,6 +659,7 @@ function doneScreen(run) {
   const l = run.lesson;
   const next = nextAfter(l);
   const perfect = run.firstTryCount === total;
+  const bonus = gamesFor(l)[0];
   return `
 <main class="screen finish">
   ${ottoFull(170)}
@@ -538,11 +670,131 @@ function doneScreen(run) {
     <div class="stat"><b>+${run.earned}</b><span>ink drops</span></div>
     <div class="stat"><b>${run.bestCombo}</b><span>best in a row</span></div>
   </div>
+  ${courseComplete(l.course) ? `
+  <a class="cert-card" href="#certificate/${l.course.id}">
+    <span class="shelf-icon" style="background: ${l.course.subjectInfo.tint}">${stroke(ICON.medal, 22, l.course.subjectInfo.color)}</span>
+    <span class="shelf-text"><b>Course complete!</b><span>See your certificate for ${l.course.title}</span></span>
+    ${stroke('M9 6l6 6-6 6', 20, '#4A4566')}
+  </a>` : ''}
+  ${bonus ? bonusCard(l, bonus) : ''}
   ${next
     ? `<a class="btn-primary" href="#lesson/${next.id}" data-autofocus>Next: ${next.title}</a>`
     : `<a class="btn-primary" href="#course/${l.course.id}" data-autofocus>Back to the course</a>`}
   <a class="btn-ghost" href="${next ? `#course/${l.course.id}` : '#home'}">${next ? 'Back to the course' : 'Back to home'}</a>
 </main>`;
+}
+
+// state.games[lessonId][gameId] = { best, max, plays }: scores only compare within one game.
+const gameRecord = (l, g) => (state.games[l.id] || {})[g.id] || null;
+
+function bonusCard(l, g) {
+  const s = l.course.subjectInfo;
+  const rec = gameRecord(l, g);
+  return `
+  <a class="bonus-card${isKids(l) ? ' kids' : ''}" href="#game/${l.id}/${g.id}" style="--game-color: ${s.color}; --game-tint: ${s.tint}">
+    <span class="bonus-icon" aria-hidden="true">${stroke(ICON.game, 26, s.color)}</span>
+    <span class="bonus-text">
+      <small>Bonus game${rec ? ` · best ${rec.best}/${rec.max}` : ''}</small>
+      <b>${g.title}</b>
+      <span>${g.blurb}</span>
+    </span>
+    <span class="bonus-ink">${DROP(14)} ${isKids(l) ? '+10' : 'up to +20'}</span>
+  </a>`;
+}
+
+// ---------------------------------------------------------------- bonus game
+
+function newGame(lesson, gameId) {
+  const ranked = gamesFor(lesson);
+  const game = (gameId && ranked.find((g) => g.id === gameId)) || ranked[0] || null;
+  return { lesson, game, ranked, phase: 'play', result: null, ink: 0, best: false };
+}
+
+function gameScreen(g) {
+  const l = g.lesson;
+  const c = l.course;
+  const s = c.subjectInfo;
+  const kids = isKids(l);
+  if (!g.game) {
+    return `
+<main class="screen finish">
+  ${ottoFull(150)}
+  <h1>No game here yet</h1>
+  <p>This lesson doesn’t have enough content for a bonus game.</p>
+  <a class="btn-primary" href="#course/${c.id}" data-autofocus>Back to the course</a>
+</main>`;
+  }
+  if (g.phase === 'play') {
+    return `
+<main class="screen game${kids ? ' kids' : ''}" style="--game-color: ${s.color}; --game-tint: ${s.tint}">
+  <header class="lesson-top">
+    <a class="icon-btn" href="#course/${c.id}" aria-label="Close game">${stroke(ICON.close, 22, 'currentColor', 2.6)}</a>
+    <span class="game-name">${g.game.title}</span>
+    <span class="game-hud" aria-live="polite"></span>
+  </header>
+  <span class="tag" style="background: ${s.tint}; color: ${s.text}">${stroke(ICON.game, 16, s.color, 2.4)} Bonus · ${l.title}</span>
+  <div class="game-root"></div>
+</main>`;
+  }
+  const r = g.result;
+  const next = nextAfter(l);
+  const other = g.ranked.find((x) => x !== g.game);
+  const stars = Math.max(1, Math.round((3 * r.score) / Math.max(1, r.max)));
+  const rec = gameRecord(l, g.game);
+  const stats = kids
+    ? `<div class="stars" role="img" aria-label="${stars} of 3 stars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}">★</span>`).join('')}</div>
+  <div class="stats two"><div class="stat"><b>+${g.ink}</b><span>ink drops</span></div><div class="stat"><b>${r.score}/${r.max}</b><span>score</span></div></div>`
+    : `<div class="stats">
+    <div class="stat"><b>${r.label || `${r.score}/${r.max}`}</b><span>${r.points != null ? `${r.points} pts` : 'score'}</span></div>
+    <div class="stat"><b>+${g.ink}</b><span>ink drops</span></div>
+    <div class="stat"><b>${rec ? rec.best : r.score}</b><span>personal best</span></div>
+  </div>`;
+  return `
+<main class="screen finish${kids ? ' kids-finish' : ''}">
+  ${ottoFull(150)}
+  <h1>${kids ? 'You did it!' : g.best ? 'New best!' : 'Well played!'}</h1>
+  <p>${g.game.title} · <b>${l.title}</b></p>
+  ${stats}
+  ${next
+    ? `<a class="btn-primary" href="#lesson/${next.id}" data-autofocus>Next: ${next.title}</a>`
+    : `<a class="btn-primary" href="#course/${c.id}" data-autofocus>Back to the course</a>`}
+  <button type="button" class="btn-ghost" data-action="replay-game">Play again</button>
+  ${other ? `<a class="btn-ghost" href="#game/${l.id}/${other.id}">Try ${other.title} instead</a>` : ''}
+</main>`;
+}
+
+function startGame() {
+  const g = state.game;
+  const root = app.querySelector('.game-root');
+  const hudEl = app.querySelector('.game-hud');
+  if (!root || !g.game) return;
+  mountGame(g.game, g.lesson, root, {
+    speak: (text, lang) => speak(text, lang),
+    sfx: (name) => play(name),
+    hud: (html) => { if (hudEl) hudEl.innerHTML = html; },
+    onFinish: (result) => finishGame(result),
+  }, g.lesson.course.audience || 'adult');
+}
+
+function finishGame(result) {
+  const g = state.game;
+  if (!g || g.phase !== 'play') return;
+  const prev = gameRecord(g.lesson, g.game);
+  g.result = result;
+  g.ink = inkFor(g.lesson, result);
+  g.best = !!prev && result.score > prev.best;
+  state.ink += g.ink;
+  state.games[g.lesson.id] = {
+    ...state.games[g.lesson.id],
+    [g.game.id]: { best: Math.max(prev ? prev.best : 0, result.score), max: result.max, plays: (prev ? prev.plays : 0) + 1 },
+  };
+  state.lastGame = g.game.id;
+  g.phase = 'done';
+  save();
+  render();
+  play('complete');
+  vibrate([30, 40, 30, 40, 60]);
+  setTimeout(() => celebrate(app.querySelector('.finish h1'), 40), 150);
 }
 
 // ---------------------------------------------------------------- arms (pick the eight trained subjects)
@@ -595,13 +847,21 @@ const RING = [[135, 5], [227, 43], [265, 135], [227, 227], [135, 265], [43, 227]
 const SPOKES = [[171, 41], [263, 79], [301, 171], [263, 263], [171, 301], [79, 263], [41, 171], [79, 79]];
 
 function progressScreen() {
-  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  const week = days.map((d, i) => {
-    const done = i < 5 || (i === 5 && state.doneToday);
-    const cls = done ? 'done' : i === 5 ? 'today' : '';
-    return `<div class="day"><span class="dot ${cls}">${done ? stroke(ICON.check, 16, '#fff', 3.2) : ''}</span><span aria-hidden="true">${d}</span></div>`;
+  const letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const now = today();
+  const dates = weekDays();
+  const week = dates.map((date, i) => {
+    const done = state.days.includes(date);
+    const cls = done ? 'done' : date === now ? 'today' : date > now ? 'future' : 'missed';
+    const label = `${names[i]}: ${done ? 'learned' : date === now ? 'today, not yet' : date > now ? 'still to come' : 'missed'}`;
+    return `<div class="day" role="listitem" aria-label="${label}"><span class="dot ${cls}">${done ? stroke(ICON.check, 16, '#fff', 3.2) : ''}</span><span aria-hidden="true">${letters[i]}</span></div>`;
   }).join('');
+  const active = dates.filter((d) => state.days.includes(d)).length;
+  const goal = state.weeklyGoal;
   const completedCount = Object.keys(state.completed).length;
+  const certs = courses.filter(courseComplete);
+  const notes = validNotes();
 
   return `
 <main class="screen progress-screen">
@@ -629,17 +889,145 @@ function progressScreen() {
   <a class="btn-secondary manage-arms" href="#arms">${stroke(ICON.swap, 18)} Swap arms</a>
 
   <section class="card" aria-label="Streak">
-    <div class="card-head">${FLAME(22)}${state.streak}-day streak</div>
-    <div class="week">${week}</div>
+    <div class="card-head">${FLAME(22)}${streakNow()}-day streak</div>
+    <div class="week" role="list" aria-label="This week">${week}</div>
+    <div class="goal-row">
+      <p class="goal-line">${active >= goal ? `<b>${plural(active, 'day')}</b> this week · goal of ${goal} reached!` : `<b>${active} of ${goal}</b> days this week`}</p>
+      <div class="goal-pick" role="group" aria-label="Weekly goal, days">
+        ${[3, 5, 7].map((n) => `<button type="button" class="goal-btn${n === goal ? ' on' : ''}" data-action="goal" data-n="${n}" aria-pressed="${n === goal}">${n}</button>`).join('')}
+      </div>
+    </div>
+    <div class="goal-bar" aria-hidden="true"><span style="width: ${Math.min(100, (active / goal) * 100)}%"></span></div>
   </section>
 
   <div class="stats">
-    <div class="stat"><b>${(1240 + completedCount * 60 + (state.doneToday ? 45 : 0)).toLocaleString('en-US')}</b><span>XP this week</span></div>
+    <div class="stat"><b>${(1240 + completedCount * 60 + (doneToday() ? 45 : 0)).toLocaleString('en-US')}</b><span>XP this week</span></div>
     <div class="stat"><b>${state.lessons}</b><span>Lessons done</span></div>
     <div class="stat"><b style="color: #C2412A">Coral</b><span>League</span></div>
   </div>
 
+  <section class="card shelf" aria-label="Notebook and certificates">
+    <a class="shelf-row" href="#notebook">
+      <span class="shelf-icon">${stroke(ICON.note, 20, '#6C4CF1')}</span>
+      <span class="shelf-text"><b>Notebook</b><span>${notes.length ? plural(notes.length, 'saved slide') : 'Save slides with the bookmark button'}</span></span>
+      ${stroke('M9 6l6 6-6 6', 20, '#4A4566')}
+    </a>
+    ${certs.length ? certs.map((c) => `
+    <a class="shelf-row" href="#certificate/${c.id}">
+      <span class="shelf-icon" style="background: ${c.subjectInfo.tint}">${stroke(ICON.medal, 20, c.subjectInfo.color)}</span>
+      <span class="shelf-text"><b>${c.title}</b><span>Certificate · ${c.subjectInfo.name}</span></span>
+      ${stroke('M9 6l6 6-6 6', 20, '#4A4566')}
+    </a>`).join('') : `
+    <div class="shelf-row muted">
+      <span class="shelf-icon">${stroke(ICON.medal, 20, '#6E6990')}</span>
+      <span class="shelf-text"><b>Certificates</b><span>Finish every lesson in a course to earn one</span></span>
+    </div>`}
+  </section>
+
   <button type="button" class="reset" data-action="reset">Reset demo</button>
+</main>
+${tabbar('progress')}`;
+}
+
+// ---------------------------------------------------------------- certificate
+
+const courseComplete = (c) => courseLessons(c).length > 0 && courseDone(c) === courseLessons(c).length;
+const longDate = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+function certificateScreen(c) {
+  const s = c.subjectInfo;
+  const ls = courseLessons(c);
+  const back = `
+  <header class="course-top">
+    <a class="icon-btn" href="#course/${c.id}" aria-label="Back to the course">${stroke(ICON.back, 24, 'currentColor', 2.6)}</a>
+    <span class="course-subject" style="color: ${s.text}">${s.name}</span>
+  </header>`;
+  if (!courseComplete(c)) {
+    return `
+<main class="screen cert-screen">
+  ${back}
+  <section class="card cert-locked">
+    ${stroke(ICON.lock, 28, '#6E6990')}
+    <h1>Certificate locked</h1>
+    <p>Finish all ${plural(ls.length, 'lesson')} of <b>${c.title}</b> to earn it. ${courseDone(c)} done so far.</p>
+    <a class="btn-primary" href="#course/${c.id}">Back to the course</a>
+  </section>
+</main>
+${tabbar('progress')}`;
+  }
+  const results = ls.map((l) => state.completed[l.id]);
+  const at = results.map((r) => r.at || today()).sort().pop();
+  const score = results.reduce((a, r) => a + r.score, 0);
+  const total = results.reduce((a, r) => a + r.total, 0);
+  const lec = lecturerById(c.lecturer);
+  return `
+<main class="screen cert-screen">
+  ${back}
+  <article class="certificate" style="--c: ${s.color}; --t: ${s.tint}">
+    <span class="cert-eyebrow">Certificate of completion</span>
+    <div class="cert-seal">${ottoFace()}</div>
+    <p class="cert-small">This certifies that an Octavo learner has completed</p>
+    <h1>${c.title}</h1>
+    <p class="cert-subject">${s.name} · ${plural(ls.length, 'lesson')}</p>
+    <div class="stats">
+      <div class="stat"><b>${total ? Math.round((score / total) * 100) : 100}%</b><span>first-try score</span></div>
+      <div class="stat"><b>${ls.length}/${ls.length}</b><span>lessons done</span></div>
+      <div class="stat"><b>${longDate(at)}</b><span>awarded</span></div>
+    </div>
+    ${lec ? `<div class="cert-sign"><b>${esc(lec.name)}</b><span>Lecturer</span></div>` : ''}
+  </article>
+  <button type="button" class="btn-primary" data-action="share-cert" data-title="${esc(c.title)}">Share certificate</button>
+  <a class="btn-ghost" href="#course/${c.id}">Back to the course</a>
+</main>
+${tabbar('progress')}`;
+}
+
+// ---------------------------------------------------------------- notebook
+
+const noteKey = (lessonId, slide) => `${lessonId}/${slide}`;
+const validNotes = () => state.notes.filter((n) => { const l = lessonById(n.lessonId); return l && l.slides[n.slide]; });
+const isNoted = (lessonId, slide) => state.notes.some((n) => n.lessonId === lessonId && n.slide === slide);
+const bookmarkIcon = (on) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="${on ? '#6C4CF1' : 'none'}" stroke="${on ? '#6C4CF1' : 'currentColor'}" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="${ICON.bookmark}"/></svg>`;
+const plainText = (html, max = 120) => {
+  const t = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
+};
+
+function notebookScreen() {
+  const notes = validNotes().slice().sort((a, b) => (a.at < b.at ? 1 : -1));
+  const groups = courses.map((c) => ({ c, items: notes.filter((n) => lessonById(n.lessonId).course === c) })).filter((g) => g.items.length);
+  return `
+<main class="screen notebook">
+  <header class="page-head">
+    <h1>Notebook</h1>
+    <p>Slides you saved to come back to. Tap one to open it.</p>
+  </header>
+  ${groups.length ? groups.map(({ c, items }) => `
+  <section class="note-group">
+    <h2 style="color: ${c.subjectInfo.text}">${stroke(c.subjectInfo.icon, 16, c.subjectInfo.color, 2.4)} ${c.title}</h2>
+    <ul class="note-list">
+      ${items.map((n) => {
+        const l = lessonById(n.lessonId);
+        const sl = l.slides[n.slide];
+        const snippet = plainText(sl.text) || (sl.points ? plainText(sl.points.join(' · ')) : '');
+        return `
+      <li class="note-item">
+        <a href="#lesson/${l.id}/${n.slide}">
+          <small>${l.title} · slide ${n.slide + 1}</small>
+          <b>${sl.title}</b>
+          ${snippet ? `<span>${snippet}</span>` : ''}
+        </a>
+        <button type="button" class="icon-btn" data-action="unnote" data-key="${noteKey(l.id, n.slide)}" aria-label="Remove ${esc(plainText(sl.title))} from notebook">${stroke(ICON.close, 18)}</button>
+      </li>`;
+      }).join('')}
+    </ul>
+  </section>`).join('') : `
+  <section class="card note-empty">
+    ${ottoFull(110)}
+    <p>Nothing saved yet. Tap the ${bookmarkIcon(false)} bookmark on any lesson slide to keep it here.</p>
+    <a class="btn-primary" href="#home">Find a lesson</a>
+  </section>`}
+  <a class="btn-ghost" href="#progress">Back to profile</a>
 </main>
 ${tabbar('progress')}`;
 }
@@ -658,7 +1046,10 @@ function render() {
       : run.phase === 'intro' ? introScreen(run)
       : run.phase === 'quiz' ? quizScreen(run)
       : doneScreen(run);
-  } else if (r.name === 'progress') html = progressScreen();
+  } else if (r.name === 'game') html = gameScreen(state.game);
+  else if (r.name === 'progress') html = progressScreen();
+  else if (r.name === 'certificate') html = certificateScreen(courseById(r.id));
+  else if (r.name === 'notebook') html = notebookScreen();
   else if (r.name === 'arms') html = armsScreen();
   else html = homeScreen();
 
@@ -676,25 +1067,38 @@ function render() {
     if (sl.autoplay) setTimeout(() => replay(root), 350);
   }
 
+  if (r.name === 'game' && state.game.phase === 'play') startGame();
+
   const focusTarget = app.querySelector('[data-autofocus]');
   if (focusTarget) focusTarget.focus({ preventScroll: true });
 }
 
 function parseHash() {
-  const [name, id] = location.hash.replace(/^#\/?/, '').split('/');
+  const [name, id, extra] = location.hash.replace(/^#\/?/, '').split('/');
   if (name === 'course' && courseById(id)) return { name, id };
-  if (name === 'lesson' && id && lessonById(id)) return { name, id };
+  if (name === 'game' && id && lessonById(id)) return { name, id, game: extra || null };
+  if (name === 'lesson' && id && lessonById(id)) {
+    const slide = /^\d+$/.test(extra || '') ? Math.min(Number(extra), lessonById(id).slides.length - 1) : null;
+    return slide === null ? { name, id } : { name, id, slide };
+  }
   if (name === 'lesson' || name === 'practice') return { name: 'practice' };
-  if (name === 'progress' || name === 'arms') return { name };
+  if (name === 'certificate' && courseById(id)) return { name, id };
+  if (name === 'progress' || name === 'arms' || name === 'notebook') return { name };
   return { name: 'home' };
 }
 
 function route() {
   const next = parseHash();
+  stopGame();
+  if (next.name === 'game') {
+    state.game = newGame(lessonById(next.id), next.game);
+    state.lastCourse = state.game.lesson.course.id;
+  } else state.game = null;
   if (next.name === 'lesson') {
     const lesson = lessonById(next.id);
-    if (!state.run || state.run.lesson !== lesson || state.run.phase === 'done' || state.route.name !== 'lesson') {
+    if (next.slide != null || !state.run || state.run.lesson !== lesson || state.run.phase === 'done' || state.route.name !== 'lesson') {
       state.run = newRun('lesson', lesson);
+      if (next.slide != null) state.run.slide = next.slide;
     }
     state.lastCourse = lesson.course.id;
     save();
@@ -786,11 +1190,11 @@ function finishRun(run) {
   run.phase = 'done';
   state.ink += run.earned;
   state.lessons += 1;
-  if (!state.doneToday) { state.streak += 1; state.doneToday = true; }
+  if (!doneToday()) state.days = [...state.days, today()].slice(-400);
   if (run.kind === 'lesson') {
     const prev = state.completed[run.lesson.id];
     const score = Math.max(prev ? prev.score : 0, run.firstTryCount);
-    state.completed[run.lesson.id] = { score, total: run.questions.length };
+    state.completed[run.lesson.id] = { score, total: run.questions.length, at: today() };
   }
   save();
 }
@@ -816,7 +1220,7 @@ const actions = {
     const flipped = el.classList.contains('flipped');
     el.setAttribute('aria-pressed', String(flipped));
     el.setAttribute('aria-label', flipped ? `${el.dataset.say}: ${el.querySelector('.flip-back').textContent}` : `${el.dataset.say}: tap to reveal`);
-    if (flipped && el.dataset.say) speak(el.dataset.say, 'es-ES');
+    if (flipped && el.dataset.say) speak(el.dataset.say, el.dataset.lang || 'es-ES');
   },
   say(el) {
     if (!speak(el.dataset.text, el.dataset.lang)) showToast('Audio isn’t available on this device');
@@ -857,6 +1261,16 @@ const actions = {
     const q = run.questions[run.q];
     run.checked = true;
     const correct = isCorrect(q, run);
+    const ref = run.refs && run.refs[run.q];
+    if (ref && run.firstTry) {
+      const key = qKey(ref.lessonId, ref.i);
+      if (!correct) state.misses[key] = (state.misses[key] || 0) + 1;
+      else if (run.kind === 'practice' && state.misses[key]) {
+        state.misses[key] -= 1;
+        if (!state.misses[key]) { delete state.misses[key]; run.fixed += 1; }
+      }
+      save();
+    }
     if (correct) {
       run.lastEarned = run.firstTry ? 15 : 5;
       run.earned += run.lastEarned;
@@ -929,10 +1343,55 @@ const actions = {
     showToast(`${into} replaced ${out}. Progress is kept.`);
   },
 
+  // bonus game
+  'replay-game'() {
+    const g = state.game;
+    state.game = newGame(g.lesson, g.game.id);
+    render();
+  },
+
+  // notebook
+  note(el) {
+    const run = state.run;
+    const id = run.lesson.id;
+    const on = !isNoted(id, run.slide);
+    state.notes = on
+      ? [...state.notes, { lessonId: id, slide: run.slide, at: new Date().toISOString() }]
+      : state.notes.filter((n) => !(n.lessonId === id && n.slide === run.slide));
+    save();
+    // Update in place: re-rendering would restart the slide's interactive parts.
+    el.setAttribute('aria-pressed', String(on));
+    el.innerHTML = bookmarkIcon(on);
+    play('tap');
+    showToast(on ? 'Saved to your notebook' : 'Removed from your notebook');
+  },
+  unnote(el) {
+    state.notes = state.notes.filter((n) => noteKey(n.lessonId, n.slide) !== el.dataset.key);
+    save();
+    render();
+    showToast('Removed from your notebook');
+  },
+
+  // weekly goal and certificates
+  goal(el) {
+    state.weeklyGoal = Number(el.dataset.n);
+    save();
+    play('tap');
+    render();
+    showToast(`Goal: learn on ${state.weeklyGoal} days a week`);
+  },
+  'share-cert'(el) {
+    const data = { title: 'My Octavo certificate', text: `I completed “${el.dataset.title}” on Octavo!`, url: location.href };
+    if (navigator.share) { navigator.share(data).catch(() => { /* cancelled */ }); return; }
+    if (navigator.clipboard) navigator.clipboard.writeText(`${data.text} ${data.url}`).then(() => showToast('Link copied'), () => showToast('Couldn’t copy the link'));
+    else showToast('Sharing isn’t available here');
+  },
+
   // misc
   reset() {
     try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
-    Object.assign(state, defaults(), { run: null });
+    stopGame();
+    Object.assign(state, defaults(), { run: null, game: null });
     render();
     showToast('Demo reset');
   },
@@ -1012,7 +1471,7 @@ route();
 // GitHub Pages lets browsers reuse files for up to 10 minutes, so a phone can keep
 // running an old copy after a release. Compare with version.json (fetched fresh)
 // and reload once when a newer release is out. Bump APP_VERSION with every release.
-const APP_VERSION = '5';
+const APP_VERSION = '8';
 function checkForUpdate() {
   fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : null))

@@ -78,6 +78,8 @@
   window.Octavo.addCourse({
     id: 'atoms',
     subject: 'Chemistry',
+    audience: 'adult',
+    lecturer: 'novak',
     title: 'Atoms and elements',
     blurb: 'What everything is made of: protons, neutrons, electrons and the periodic table.',
     artBg: '#F3FBF6',

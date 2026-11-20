@@ -34,6 +34,8 @@
   window.Octavo.addCourse({
     id: 'python',
     subject: 'Code',
+    audience: 'adult',
+    lecturer: 'kai',
     title: 'Python: first steps',
     blurb: 'Write and trace real Python: variables, loops and printing results.',
     artBg: '#F2FBF9',
